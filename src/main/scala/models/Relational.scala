@@ -1,4 +1,4 @@
-/* package pridwen.models
+package pridwen.models
 
 import shapeless.{HList, HNil, ::, Lazy}
 import shapeless.labelled.{FieldType}
@@ -8,10 +8,11 @@ import java.time.{LocalDate => Date}
 trait Relation[S <: HList] extends Model { type Schema = S }
 trait SomeRelation extends Relation[HNil]
 object Relation extends Relation[HNil] {
+    val data = List(HNil)
     type Aux[S <: HList, Schema0 <: HList] = Relation[S] { type Schema = Schema0 }
     type IsConform[S <: HList] = Aux[S, S]
-    def apply[S <: HList](implicit ok: Relation[S]): Aux[S, ok.Schema] = ok
-    private def inhabit_Type[S <: HList]: Aux[S, S] = new Relation[S] { override type Schema = S }
+    def apply[S <: HList](d: List[S])(implicit ok: Relation[S]): Aux[S, ok.Schema] = new Relation[S] { override type Schema = ok.Schema ; val data = d }
+    private def inhabit_Type[S <: HList]: Aux[S, S] = new Relation[S] { override type Schema = S ; val data = List() }
 
     implicit def empty_schema = inhabit_Type[HNil]
     implicit def schema_with_multiple_attributes[K, V, T <: HList](
@@ -32,4 +33,4 @@ object Relation extends Relation[HNil] {
         implicit def rel_bool = inhabit_RType[Boolean]
         implicit def rel_date = inhabit_RType[Date]
     }
-} */
+}

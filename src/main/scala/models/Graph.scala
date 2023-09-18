@@ -1,4 +1,4 @@
-/* package pridwen.models
+package pridwen.models
 
 import shapeless.{HList, HNil, ::, Witness}
 import shapeless.labelled.{FieldType}
@@ -8,15 +8,16 @@ import java.time.{LocalDate => Date}
 import pridwen.models.aux.{CheckSchemaNodes, CheckSchemaEdges}
 
 trait Graph[S <: HList] extends Model
-trait SomeGraph extends Graph[HNil] { type Schema = HNil }
+trait SomeGraph extends Graph[HNil] { type Schema = HNil ; val data = List(HNil) }
 object Graph {
+
     type NodeKey = Witness.`'id`.T 
 
     type Aux[S <: HList, Schema0 <: HList] = Graph[S] { type Schema = Schema0 }
     type IsConform[S <: HList] = Aux[S, S]
-    protected def inhabit_Type[S <: HList, Schema0 <: HList]: Aux[S, Schema0] = new Graph[S] { type Schema = Schema0 }
+    protected def inhabit_Type[S <: HList, Schema0 <: HList]: Aux[S, Schema0] = new Graph[S] { type Schema = Schema0 ; val data = List() }
     
-    def apply[S <: HList](implicit ok: Graph[S]): Aux[S, ok.Schema] = ok
+    def apply[S <: HList](d: List[S])(implicit ok: Graph[S]): Aux[S, ok.Schema] = new Graph[S] { type Schema = ok.Schema ; val data = d }
 
     implicit def edge_list[SK, DK, EK, SS, DS, ES, Out0, Out1](
         implicit
@@ -35,4 +36,4 @@ object Graph {
         FieldType[NK, NS] :: HNil,
         FieldType[Witness.`'nodes`.T, Out0] :: HNil
     ]
-} */
+}
