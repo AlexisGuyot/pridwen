@@ -1,4 +1,4 @@
-package pridwen.models.aux
+/* package pridwen.models.aux
 
 import shapeless.{HList, HNil, ::}
 import shapeless.ops.hlist.{Selector => HSelector, Remove}
@@ -58,4 +58,4 @@ object CheckSchemaEdges extends LowPriorityCheckSchemaEdges {
     ) = inhabit_Type[S]
 
     implicit def rule3 = inhabit_Type[HList]
-}
+} */

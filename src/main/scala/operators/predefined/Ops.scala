@@ -1,32 +1,43 @@
 package pridwen.operators.predefined
 
 import shapeless.{HList, HNil, ::, Witness => W}
-import shapeless.labelled.{FieldType => Field}
+import shapeless.labelled.{FieldType => Field, field}
 
 import pridwen.models._
 import pridwen.models.aux.{SelectAtt}
+import pridwen.support.functions.{getFieldValue, rename}
 
 object ops {
-    /* def constructGraph[
+    def constructGraph[
         M <: Model,
-        Path_To_Sources <: HList,
-        Path_To_Dests <: HList,
-        Nodes_Id,
+        Path_To_Source <: HList, Path_To_Source_Att <: HList, 
+        Path_To_Dest <: HList, Path_To_Dest_Att <: HList,
         Path_To_Edges <: HList,
-        NS <: HList,
-        ES <: HList
+        Full_Path <: HList,
+        SK, DK, NS
     ](
-        data: List[M],
-        sources: Path_To_Sources,
-        dests: Path_To_Dests,
-        nodes_id: Nodes_Id,
-        edges: Path_To_Edges
+        m: M,
+        source: Path_To_Source,
+        dest: Path_To_Dest,
+        source_att: Path_To_Source_Att,
+        dest_att: Path_To_Dest_Att
     )(
         implicit
-        sn1: SelectAtt.Aux[M#Schema, Path_To_Sources, NS],
-        sn2: SelectAtt.Aux[M#Schema, Path_To_Dests, NS],
-        sn3: SelectAtt[NS, Nodes_Id::HNil],
-        se: SelectAtt.Aux[M#Schema, Path_To_Edges, ES]
-    ): List[Graph[Field[W.`'source`.T, NS] :: Field[W.`'dest`.T, NS] :: Field[W.`'edge`.T, ES] :: HNil]] = ??? */
-        //= data.map(hlist => )
+        sn1: SelectAtt.Aux[M#Schema, Path_To_Source, SK, NS],
+        sn2: SelectAtt.Aux[M#Schema, Path_To_Dest, DK, NS],
+    ) = (dataset: List[m.Schema]) => {
+        val nodes_id = W('id)
+        Graph(
+            dataset
+            .groupBy(hlist => (getFieldValue(sn1(hlist)), getFieldValue(sn2(hlist))))
+            .mapValues(_.size)
+            .map { case (key, value) => 
+                (field[nodes_id.T](key._1)::HNil) :: 
+                (field[nodes_id.T](key._2)::HNil) ::
+                (field[W.`'weight`.T](value)::HNil) :: HNil
+            }
+            .toList,
+            nodes_id
+        )
+    }
 }

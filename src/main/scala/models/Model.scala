@@ -4,6 +4,8 @@ import shapeless.{HList, HNil, ::}
 import shapeless.labelled.{FieldType}
 import shapeless.ops.hlist.{IsHCons}
 
+//trait Model[S <: HList]
+
 trait Model { type Schema <: HList ; val data: List[Schema] }
 /* object Model {
     trait Infer[S] { type Out <: Model }

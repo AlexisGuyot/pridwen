@@ -7,8 +7,7 @@ import java.time.{LocalDate => Date}
 
 trait Relation[S <: HList] extends Model { type Schema = S }
 trait SomeRelation extends Relation[HNil]
-object Relation extends Relation[HNil] {
-    val data = List(HNil)
+object Relation {
     type Aux[S <: HList, Schema0 <: HList] = Relation[S] { type Schema = Schema0 }
     type IsConform[S <: HList] = Aux[S, S]
     def apply[S <: HList](d: List[S])(implicit ok: Relation[S]): Aux[S, ok.Schema] = new Relation[S] { override type Schema = ok.Schema ; val data = d }

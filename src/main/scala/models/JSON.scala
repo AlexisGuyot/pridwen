@@ -7,8 +7,7 @@ import java.time.{LocalDate => Date}
 
 trait JSON[S <: HList] extends Model { type Schema = S }
 trait SomeJSON extends JSON[HNil]
-object JSON extends JSON[HNil] {
-    val data = List(HNil)
+object JSON {
     type Aux[S <: HList, Schema0 <: HList] = JSON[S] { type Schema = Schema0 }
     type IsConform[S <: HList] = Aux[S, S]
     def apply[S <: HList](d: List[S])(implicit ok: JSON[S]): Aux[S, ok.Schema] = new JSON[S] { override type Schema = ok.Schema ; val data = d }
