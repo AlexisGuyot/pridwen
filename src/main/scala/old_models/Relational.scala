@@ -1,4 +1,4 @@
-package pridwen.models
+package pridwen.old.models
 
 import shapeless.{HList, HNil, ::, Lazy}
 import shapeless.labelled.{FieldType}

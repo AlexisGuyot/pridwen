@@ -9,7 +9,10 @@ import pridwen.models.{Model}
 import pridwen.support.{RSelector}
 import pridwen.support.functions.{getFieldValue}
 
-abstract class As[K <: Witness, P <: HList](k: K, p: P)
+trait As[K, P <: HList]
+object As {
+    def apply[P <: HList](k: Witness, p: P) = new As[k.T, P] {}
+}
 
 trait SelectAtt[M, P] { type KOut ; type VOut ; def apply(in: M): Field[KOut, VOut] }
 object SelectAtt {
@@ -33,7 +36,7 @@ object SelectAtt {
         (s: S) => field[K](rs(s))
     )
 
-    implicit def with_alias[S <: HList, A <: Witness, P <: HList, KOut0, VOut0](
+    implicit def with_alias[S <: HList, A <: Symbol, P <: HList, KOut0, VOut0](
         implicit
         sa: Lazy[SelectAtt.Aux[S, P, KOut0, VOut0]]
     ) = inhabit_Type[S, As[A, P], A, VOut0](

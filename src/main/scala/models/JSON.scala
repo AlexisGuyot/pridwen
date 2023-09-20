@@ -5,20 +5,33 @@ import shapeless.labelled.{FieldType}
 
 import java.time.{LocalDate => Date}
 
-trait JSON[S <: HList] extends Model { type Schema = S }
-trait SomeJSON extends JSON[HNil]
-object JSON {
-    type Aux[S <: HList, Schema0 <: HList] = JSON[S] { type Schema = Schema0 }
-    type IsConform[S <: HList] = Aux[S, S]
-    def apply[S <: HList](d: List[S])(implicit ok: JSON[S]): Aux[S, ok.Schema] = new JSON[S] { override type Schema = ok.Schema ; val data = d }
-    private def inhabit_Type[S <: HList]: Aux[S, S] = new JSON[S] { override type Schema = S ; val data = List() }
+import pridwen.support.{DeepGeneric}
 
-    implicit def empty_schema = inhabit_Type[HNil]
+trait JSON[S] extends Model[S]
+object JSON {
+    type Aux[S, Repr0 <: HList] = JSON[S] { type Repr = Repr0 }
+    def apply[S](implicit ok: JSON[S]): Aux[S, ok.Repr] = ok
+    private def inhabit_Type[S, Repr0 <: HList](f: S => Repr0): Aux[S, Repr0] = new JSON[S] { type Repr = Repr0 ; def toRepr(s: S) = f(s) }
+    
+    //def load[S](j: JSON[S])(dataset: List[j.Repr]) = new JSON[j.Repr] { type Repr = j.Repr ; override val data = dataset ; def toRepr(s: j.Repr) = s }
+    def load[S](j: JSON[S])(dataset: List[S]) = new JSON[S] { type Repr = j.Repr ; override val data = dataset.map(s => toRepr(s)) ; def toRepr(s: S) = j.toRepr(s) }
+
+    implicit def case_class_schema[CCS <: Product, S <: HList](
+        implicit
+        gen: DeepGeneric.Aux[CCS, S],
+        j: JSON[S]
+    ) = inhabit_Type[CCS, S](
+        (s: CCS) => gen.to(s)
+    )
+
+    implicit def empty_schema = inhabit_Type[HNil, HNil]((s: HNil) => HNil)
     implicit def schema_with_multiple_attributes[K, V, T <: HList](
         implicit
         r: JType[V],
-        i: JSON.IsConform[T]
-    ) = inhabit_Type[FieldType[K,V]::T]
+        i: JSON[T]
+    ) = inhabit_Type[FieldType[K,V]::T, FieldType[K,V]::T](
+        (s: FieldType[K,V]::T) => s
+    )
 
     private trait JType[T]
     private object JType {
@@ -33,6 +46,6 @@ object JSON {
         implicit def json_date = inhabit_JType[Date]
         //implicit def json_hlist = inhabit_JType[HList]
         implicit def json_multi[T : JType] = inhabit_JType[List[T]]
-        implicit def json_nested[H <: HList : JSON.IsConform] = inhabit_JType[H]
+        implicit def json_nested[H <: HList : JSON] = inhabit_JType[H]
     }
 }

@@ -39,13 +39,13 @@ object UPrepend {
             p: UPrepend_RT.Aux[L1, T2, Out0]
         ) = inhabit_Type[L1, HList::T2, Out0]
 
-        implicit def element_is_invalid_type_model [
+        /* implicit def element_is_invalid_type_model [
             L1 <: HList, M <: Model, T2 <: HList, 
             Out0 <: HList
         ](
             implicit
             p: UPrepend_RT.Aux[L1, T2, Out0]
-        ) = inhabit_Type[L1, M::T2, Out0]
+        ) = inhabit_Type[L1, M::T2, Out0] */
 
         implicit def element_is_not_in_l1 [
             L1 <: HList, H2, T2 <: HList, 
@@ -68,7 +68,7 @@ object UPrepend {
             p: UPrepend_RT.Aux[L2, L1, Out0]
         ) = inhabit_Type[L1, L2, Out0]
 
-        // More priority than element_is_invalid_type_model
+        /* // More priority than element_is_invalid_type_model
         implicit def l1_contains_invalid_type_model [
             L1 <: HList, L2 <: HList, 
             Out0 <: HList
@@ -76,7 +76,7 @@ object UPrepend {
             implicit
             s: SubTypeSelector[L1, Model],
             p: UPrepend_RT.Aux[L2, L1, Out0]
-        ) = inhabit_Type[L1, L2, Out0]
+        ) = inhabit_Type[L1, L2, Out0] */
 
         // More priority than element_is_not_in_l1
         implicit def element_is_already_in_l1 [

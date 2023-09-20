@@ -3,8 +3,8 @@ package pridwen
 object Main extends App {  
     import shapeless.{::, HNil, Witness => W, LabelledGeneric}
     import shapeless.labelled.{FieldType => Field, field}
-    import pridwen.models.{JSON, Relation}
-    import pridwen.models.aux.{SelectAtt, As}
+    import pridwen.models._
+    import pridwen.models.aux.{SelectAtt, As, SelectManyAtt}
     import pridwen.support.display._
     import pridwen.support.{DeepGeneric}
     import pridwen.operators.predefined.ops._
@@ -14,35 +14,31 @@ object Main extends App {
     case class RetweetedStatus(user: User)
     case class CC_InputSchema1(user: User, retweeted_status: RetweetedStatus)
     case class CC_InputSchema2(user: User)
-
-    println(show(SelectAtt[InputSchema1, W.`'user`.T :: HNil]))
-
-    val gen1 = LabelledGeneric[CC_InputSchema1]
-    println(show(gen1))
-    val gen2 = DeepGeneric[CC_InputSchema1]
-    println(show(gen2))
+    //val gen2 = DeepGeneric[CC_InputSchema1]
 
     val dataset_cc = List(
         CC_InputSchema1(User(1268486802949767200L, "A"), RetweetedStatus(User(277430850L, "B"))),
         CC_InputSchema1(User(1268486802949767200L, "A"), RetweetedStatus(User(277430850L, "B"))),
         CC_InputSchema1(User(1268486302459767200L, "C"), RetweetedStatus(User(277430850L, "B"))),        
     )
-    println(show(dataset_cc))
-    val dataset_hlist = dataset_cc.map(cc => gen2.to(cc))
-    //println(show(dataset_hlist))
-    println(dataset_hlist)
+    //val dataset_hlist = dataset_cc.map(cc => gen2.to(cc))
+    val input_model = JSON[CC_InputSchema1]
+    val dataset_json = JSON.load(input_model)(dataset_cc)
 
-    val dataset_json = JSON[gen2.Repr](dataset_hlist)
     val build_graph_rt = constructGraph(
-        dataset_json, 
-        //W('user) :: field[W.`'id`.T](0L) :: HNil, 
-        //W('retweeted_status) :: W('user) :: field[W.`'id`.T](0L) :: HNil, 
+        input_model, 
         W('user) :: W('id) :: HNil, 
         W('retweeted_status) :: W('user) :: W('id) :: HNil, 
-        HNil,
+        (W('user) :: W('name) :: HNil) :: HNil,
+        As(W('test), W('retweeted_status) :: W('user) :: W('name) :: HNil) :: HNil,
         HNil
     )
-    //println(show(build_graph_rt))
+    println(show_op("build_graph_rt", build_graph_rt))
 
-    println("Hello World") 
+    val graph_rt = build_graph_rt(dataset_json)
+    println("\nSchema graph_rt:")
+    println(show(graph_rt))
+    println("\nGraph_rt:")
+    println(graph_rt.data)
+    println()
 }

@@ -5,7 +5,7 @@ import shapeless.{HList, HNil, ::, Typeable, Lazy}
 import scala.reflect.runtime.universe.{TypeTag, WeakTypeTag}
 
 import pridwen.support.{UPrepend, ToHList}
-import pridwen.models.{Model}
+import pridwen.models.{Model, GetModelRepr}
 
 object display {
     // To select and display one path-dependant type
@@ -21,6 +21,15 @@ object display {
     def show[T](val_name: String)(implicit tag: TypeTag[T]) = format_output(val_name + ": " + tag.toString())
     def show[T](implicit tag: TypeTag[T]) = format_output(tag.toString())
     def show(value: String): String = format_output(value)
+    //def show_op[S1, S2, M1[_] <: Model[_], M2[_] <: Model[_], Schema1 <: HList, Schema2 <: HList](value: Model.Aux[M1, S1, Schema1] => Model.Aux[M2, S2, Schema2]) = show[M1[S1]]
+    def show_op[M1 <: Model[_] : TypeTag, M2 <: Model[_] : TypeTag](name: String, value: M1 => M2) 
+        = s"========== Operator: ${name}\n\n${show[M1]}\n=>\n${show[M2]}\n\n====================="
+    /* (
+        implicit
+        m: M1[S1]
+        //s2: GetModelRepr.Aux[M2[S2], Schema2],
+        //t1: TypeTag[Schema1]
+    ) = "Bonjour" //s"${format_output(t1.toString())}\nabc\n${show(Show[Schema2])}" */
     
     def show_model[S <: HList : TypeTag] = println(show[S])
 
