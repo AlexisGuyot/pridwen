@@ -3,7 +3,7 @@ package pridwen
 object Main extends App {  
     import shapeless.{::, HNil, Witness => W, LabelledGeneric}
     import shapeless.labelled.{FieldType => Field, field}
-    import pridwen.models._
+    import pridwen.models.alt._
     import pridwen.models.aux.{SelectAtt, As, SelectManyAtt}
     import pridwen.support.display._
     import pridwen.support.{DeepGeneric}
@@ -22,23 +22,31 @@ object Main extends App {
         CC_InputSchema1(User(1268486302459767200L, "C"), RetweetedStatus(User(277430850L, "B"))),        
     )
     //val dataset_hlist = dataset_cc.map(cc => gen2.to(cc))
-    val input_model = JSON[CC_InputSchema1]
-    val dataset_json = JSON.load(input_model)(dataset_cc)
+    //val input_model = JSON[CC_InputSchema1]
+    //val dataset_json = JSON.load(JSON[CC_InputSchema1])(dataset_cc)
 
-    val build_graph_rt = constructGraph(
-        input_model, 
+    val graph_rt = constructGraph(
+        JSON[CC_InputSchema1](dataset_cc), 
         W('user) :: W('id) :: HNil, 
         W('retweeted_status) :: W('user) :: W('id) :: HNil, 
         (W('user) :: W('name) :: HNil) :: HNil,
         As(W('test), W('retweeted_status) :: W('user) :: W('name) :: HNil) :: HNil,
         HNil
     )
-    println(show_op("build_graph_rt", build_graph_rt))
+    println("\nSchema graph_rt:")
+    println(show(graph_rt))
+    println("\nGraph_rt:")
+    println(graph_rt.data)
+    println()
+
+    /* println(show_op("build_graph_rt", build_graph_rt))
 
     val graph_rt = build_graph_rt(dataset_json)
     println("\nSchema graph_rt:")
     println(show(graph_rt))
     println("\nGraph_rt:")
     println(graph_rt.data)
-    println()
+    println() */
+
+    pridwen.models.alt.JSON[CC_InputSchema1](dataset_cc)
 }

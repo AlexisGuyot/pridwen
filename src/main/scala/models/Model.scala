@@ -2,9 +2,9 @@ package pridwen.models
 
 import shapeless.{HList, HNil}
 
-trait Model[S] { 
+abstract class Model[S](dataset: List[S]) { 
     type Repr <: HList
-    val data: List[Repr] = List() 
+    val data: List[Repr] = dataset.map(s => toRepr(s))
     def toRepr(s: S): Repr
 }
 object Model {
@@ -27,8 +27,8 @@ object GetModelRepr {
         r: Relation.Aux[S, Repr0]
     ) = inhabit_Type[M[S], Repr0]
 
-    implicit def get_aux_graph[S, VID, M[_, _] <: Graph[_, _], E0 <: HList, V0 <: HList](
+    implicit def get_aux_graph[S, SID, DID, M[_, _, _] <: Graph[_, _, _], E0 <: HList, V0 <: HList](
         implicit
-        g: Graph.Aux[S, VID, E0, V0]
-    ) = inhabit_Type[M[S, VID], E0]
+        g: Graph.Aux[S, SID, DID, E0, V0]
+    ) = inhabit_Type[M[S, SID, DID], E0]
 }
