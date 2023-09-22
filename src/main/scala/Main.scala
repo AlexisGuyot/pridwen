@@ -4,7 +4,7 @@ object Main extends App {
     import shapeless.{::, HNil, Witness => W, LabelledGeneric}
     import shapeless.labelled.{FieldType => Field, field}
     import pridwen.models.alt._
-    import pridwen.models.aux.{SelectAtt, As, SelectManyAtt}
+    import pridwen.models.aux.{SelectAtt, As, SelectManyAtt, SelectSiblings}
     import pridwen.support.display._
     import pridwen.support.{DeepGeneric}
     import pridwen.operators.predefined.ops._
@@ -49,4 +49,5 @@ object Main extends App {
     println() */
 
     pridwen.models.alt.JSON[CC_InputSchema1](dataset_cc)
+    println(show(SelectSiblings[InputSchema1, W.`'retweeted_status`.T :: W.`'user`.T :: W.`'id`.T :: HNil]))
 }

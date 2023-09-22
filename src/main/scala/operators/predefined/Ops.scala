@@ -2,9 +2,10 @@ package pridwen.operators.predefined
 
 import shapeless.{HList, HNil, ::, Witness => W}
 import shapeless.labelled.{FieldType => Field, field}
+import shapeless.ops.hlist.{Prepend}
 
 import pridwen.models.alt._
-import pridwen.models.aux.{SelectAtt, SelectManyAtt}
+import pridwen.models.aux.{SelectAtt, SelectManyAtt, SelectSiblings}
 import pridwen.support.functions.{getFieldValue, rename}
 
 object ops {
@@ -97,15 +98,27 @@ object ops {
         res_model(d)
     }
 
-    def join[
+    def inner_join[
         ML[_] <: Model[_], SchemaL, MR[_] <: Model[_], SchemaR,
         Path_To_Left_Key <: HList, Path_To_Right_Key <: HList,
-        MOut <: Model[_]
+        LK, RK, KT,
+        Siblings_LK <: HList, Siblings_RK <: HList,
+        New_Schema <: HList,
+        MOut[_] <: Model[_]
     ](
         ldataset: ML[SchemaL],
         rdataset: MR[SchemaR],
         lkey: Path_To_Left_Key,
         rkey: Path_To_Right_Key,
-        mout: MOut
+        mout: MOut[_]
+    )(
+        implicit
+        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LK, KT],
+        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RK, KT],
+        // Renommer LK/RK si LK == RK
+        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LK],
+        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RK],
+        concat_siblings: Prepend.Aux[Siblings_LK, Siblings_RK, New_Schema],
+        // res_model: ValidMOut[New_Schema]
     ) = ???
 }
