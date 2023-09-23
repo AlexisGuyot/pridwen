@@ -22,7 +22,7 @@ object SelectSiblings {
 
     implicit def path_of_1[S <: HList, A](
         implicit
-        s: HSelector[S, A]
+        s: SelectAtt[S, A::HNil]
     ) = inhabit_Type[S, A::HNil, S](
         (s: S) => s
     )

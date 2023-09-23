@@ -3,9 +3,11 @@ package pridwen.operators.predefined
 import shapeless.{HList, HNil, ::, Witness => W}
 import shapeless.labelled.{FieldType => Field, field}
 import shapeless.ops.hlist.{Prepend}
+import shapeless.ops.record.{Renamer}
 
+import pridwen.operators.aux._
 import pridwen.models.alt._
-import pridwen.models.aux.{SelectAtt, SelectManyAtt, SelectSiblings}
+import pridwen.models.aux.{SelectAtt, SelectManyAtt, SelectSiblings, ValidModel}
 import pridwen.support.functions.{getFieldValue, rename}
 
 object ops {
@@ -101,24 +103,33 @@ object ops {
     def inner_join[
         ML[_] <: Model[_], SchemaL, MR[_] <: Model[_], SchemaR,
         Path_To_Left_Key <: HList, Path_To_Right_Key <: HList,
-        LK, RK, KT,
+        LK, RK, KT, RLK, RRK,
         Siblings_LK <: HList, Siblings_RK <: HList,
+        LSchema <: HList, RSchema <: HList,
         New_Schema <: HList,
-        MOut[_] <: Model[_]
+        MOut <: Model[_]
     ](
         ldataset: ML[SchemaL],
         rdataset: MR[SchemaR],
         lkey: Path_To_Left_Key,
         rkey: Path_To_Right_Key,
-        mout: MOut[_]
+        mout: MOut
     )(
         implicit
         get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LK, KT],
         get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RK, KT],
-        // Renommer LK/RK si LK == RK
         get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LK],
         get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RK],
-        concat_siblings: Prepend.Aux[Siblings_LK, Siblings_RK, New_Schema],
-        // res_model: ValidMOut[New_Schema]
-    ) = ???
+        check_key_names: CheckFName.Aux[LK, RK, RLK, RRK],
+        rename_lk: Renamer.Aux[Siblings_LK, LK, RLK, LSchema],
+        rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
+        concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
+        res_model: ValidModel[MOut, New_Schema, HNil]
+    ) = {
+        val d = scala.collection.mutable.ListBuffer.empty[New_Schema]
+        ldataset.data.foreach(lschema => rdataset.data.foreach(rschema => 
+            if(getFieldValue(get_left_key(lschema)) == getFieldValue(get_right_key(rschema))) concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema))) +=: d
+        ))
+        res_model(d.to(List))
+    }
 }

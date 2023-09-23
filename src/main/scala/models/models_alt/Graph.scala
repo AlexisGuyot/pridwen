@@ -20,10 +20,28 @@ object Graph {
 }
 
 trait ValidGraph[S, SID, DID] { type Out <: Graph[_,_,_] ; def apply(dataset: List[S]): Out }
-object ValidGraph {
-    def apply[S, SID, DID](implicit ok: ValidGraph[S, SID, DID]): Aux[S, SID, DID, ok.Out] = ok
+trait LowPriorityValidGraph {
     type Aux[S, SID, DID, Out0 <: Graph[_,_,_]] = ValidGraph[S, SID, DID] { type Out = Out0 }
     protected def inhabit_Type[S, SID, DID, E0 <: HList, V0 <: HList](f: S => E0): Aux[S, SID, DID, Graph.Aux[S, SID, DID, E0, V0]] = new ValidGraph[S, SID, DID] { type Out = Graph.Aux[S, SID, DID, E0, V0] ; def apply(dataset: List[S]) = new Graph[S, SID, DID](dataset) { type Repr = E0 ; type E = E0; type V = V0 ; def toRepr(s: S) = f(s) } }
+
+    implicit def edge_list2[SS <: HList, DS <: HList, SID, DID, NS <: HList]
+    (
+        implicit
+        i1: ValidRelation[SS],
+        i2: ValidRelation[DS],
+        s1: RSelector[SS, SID],
+        s2: RSelector[DS, DID],
+        p: Prepend.Aux[SS, DS, NS]
+    ) = inhabit_Type[
+        SS :: DS :: HNil, SID, DID,
+        FieldType[Witness.`'source`.T, SS] :: FieldType[Witness.`'dest`.T, DS] :: FieldType[Witness.`'edge`.T, HNil] :: HNil,
+        FieldType[Witness.`'nodes`.T, NS] :: HNil
+    ](
+        (s: SS :: DS :: HNil) => field[Witness.`'source`.T](s.head) :: field[Witness.`'dest`.T](s.tail.head) :: field[Witness.`'edge`.T](HNil) :: HNil
+    )
+}
+object ValidGraph extends LowPriorityValidGraph {
+    def apply[S, SID, DID](implicit ok: ValidGraph[S, SID, DID]): Aux[S, SID, DID, ok.Out] = ok
 
     implicit def case_class_schema[CCS <: Product, S <: HList, SID, DID, E0 <: HList, V0 <: HList](
         implicit

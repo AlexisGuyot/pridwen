@@ -39,15 +39,19 @@ object Main extends App {
     println(graph_rt.data)
     println()
 
-    /* println(show_op("build_graph_rt", build_graph_rt))
-
-    val graph_rt = build_graph_rt(dataset_json)
-    println("\nSchema graph_rt:")
-    println(show(graph_rt))
-    println("\nGraph_rt:")
-    println(graph_rt.data)
-    println() */
-
-    pridwen.models.alt.JSON[CC_InputSchema1](dataset_cc)
-    println(show(SelectSiblings[InputSchema1, W.`'retweeted_status`.T :: W.`'user`.T :: W.`'id`.T :: HNil]))
+    val rel_dataset = Relation[Field[W.`'id`.T, Long] :: Field[W.`'community`.T, Int] :: HNil](List(
+        field[W.`'id`.T](1268486802949767200L) :: field[W.`'community`.T](1) :: HNil,
+        field[W.`'id`.T](1268486302459767200L) :: field[W.`'community`.T](2) :: HNil,
+        field[W.`'id`.T](4586302459767200L) :: field[W.`'community`.T](3) :: HNil
+    ))
+    val joined_dataset = inner_join(
+        graph_rt, rel_dataset,
+        W('source) :: W('id) :: HNil,
+        W('id) :: HNil,
+        Model.JSON
+    )
+    println("\nSchema joined_dataset:")
+    println(show(joined_dataset))
+    println("\nJoined_dataset:")
+    println(joined_dataset.data)
 }
