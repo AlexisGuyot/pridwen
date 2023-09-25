@@ -4,7 +4,7 @@ object Main extends App {
     import shapeless.{::, HNil, Witness => W, LabelledGeneric}
     import shapeless.labelled.{FieldType => Field, field}
     import pridwen.models.alt._
-    import pridwen.models.aux.{SelectAtt, As, SelectManyAtt, SelectSiblings}
+    import pridwen.models.aux.{SelectAtt, As, SelectManyAtt, SelectSiblings, Decompose}
     import pridwen.support.display._
     import pridwen.support.{DeepGeneric}
     import pridwen.operators.predefined.ops._
@@ -54,4 +54,6 @@ object Main extends App {
     println(show(joined_dataset))
     println("\nJoined_dataset:")
     println(joined_dataset.data)
+
+    //println(show(Decompose[Relation[Field[W.`'id`.T, Long] :: Field[W.`'community`.T, Int] :: HNil]]))
 }

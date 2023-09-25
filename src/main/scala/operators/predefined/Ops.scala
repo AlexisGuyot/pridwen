@@ -7,7 +7,7 @@ import shapeless.ops.record.{Renamer}
 
 import pridwen.operators.aux._
 import pridwen.models.alt._
-import pridwen.models.aux.{SelectAtt, SelectManyAtt, SelectSiblings, ValidModel}
+import pridwen.models.aux.{SelectAtt, SelectManyAtt, SelectSiblings, ValidModel, Decompose}
 import pridwen.support.functions.{getFieldValue, rename}
 
 object ops {
@@ -101,7 +101,7 @@ object ops {
     }
 
     def inner_join[
-        ML[_] <: Model[_], SchemaL, MR[_] <: Model[_], SchemaR,
+        ML <: Model[_], SchemaL, MR <: Model[_], SchemaR,
         Path_To_Left_Key <: HList, Path_To_Right_Key <: HList,
         LK, RK, KT, RLK, RRK,
         Siblings_LK <: HList, Siblings_RK <: HList,
@@ -109,8 +109,8 @@ object ops {
         New_Schema <: HList,
         MOut <: Model[_]
     ](
-        ldataset: ML[SchemaL],
-        rdataset: MR[SchemaR],
+        ldataset: ML,
+        rdataset: MR,
         lkey: Path_To_Left_Key,
         rkey: Path_To_Right_Key,
         mout: MOut
@@ -125,6 +125,40 @@ object ops {
         rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
         concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
         res_model: ValidModel[MOut, New_Schema, HNil]
+    ) = {
+        val d = scala.collection.mutable.ListBuffer.empty[New_Schema]
+        ldataset.data.foreach(lschema => rdataset.data.foreach(rschema => 
+            if(getFieldValue(get_left_key(lschema)) == getFieldValue(get_right_key(rschema))) concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema))) +=: d
+        ))
+        res_model(d.to(List))
+    }
+
+    def inner_join[
+        ML <: Model[_], SchemaL, MR <: Model[_], SchemaR,
+        Path_To_Left_Key <: HList, Path_To_Right_Key <: HList,
+        LK, RK, KT, RLK, RRK,
+        Siblings_LK <: HList, Siblings_RK <: HList,
+        LSchema <: HList, RSchema <: HList,
+        New_Schema <: HList,
+        MOut <: Model[_], PMOut
+    ](
+        ldataset: ML,
+        rdataset: MR,
+        lkey: Path_To_Left_Key,
+        rkey: Path_To_Right_Key,
+        mout: MOut,
+        pmout: PMOut
+    )(
+        implicit
+        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LK, KT],
+        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RK, KT],
+        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LK],
+        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RK],
+        check_key_names: CheckFName.Aux[LK, RK, RLK, RRK],
+        rename_lk: Renamer.Aux[Siblings_LK, LK, RLK, LSchema],
+        rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
+        concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
+        res_model: ValidModel[MOut, New_Schema, PMOut]
     ) = {
         val d = scala.collection.mutable.ListBuffer.empty[New_Schema]
         ldataset.data.foreach(lschema => rdataset.data.foreach(rschema => 
