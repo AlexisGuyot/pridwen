@@ -1,34 +1,20 @@
 package pridwen.models
 
-import shapeless.{HList, HNil}
+import shapeless.{HList, HNil, ::, Witness => W}
+import shapeless.labelled.{FieldType => Field, field}
+
+import pridwen.models.aux.{SelectAtt}
 
 abstract class Model[S](dataset: List[S]) { 
-    type Repr <: HList
+    type T
+    type Repr <: HList ; 
+    def toRepr(s: S): Repr ; 
     val data: List[Repr] = dataset.map(s => toRepr(s))
-    def toRepr(s: S): Repr
+
+    def get[P, K, V](path: P, filter: Repr => Boolean = (_ => true))(implicit select: SelectAtt.Aux[Repr, P, K, V]): List[Field[K,V]] = { val d = scala.collection.mutable.ListBuffer.empty[Field[K,V]] ; data.foreach(repr => if(filter(repr)) select(repr) +=: d) ; d.to(List) }
 }
 object Model {
-    type Aux[M[_] <: Model[_], S, Repr0 <: HList] = M[S] { type Repr = Repr0 }
-}
-
-trait GetModelRepr[M] { type Out <: HList }
-object GetModelRepr {
-    def apply[M](implicit ok: GetModelRepr[M]): Aux[M, ok.Out] = ok
-    type Aux[M, Out0 <: HList] = GetModelRepr[M] { type Out = Out0 }
-    private def inhabit_Type[M, Out0 <: HList]: Aux[M, Out0] = new GetModelRepr[M] { type Out = Out0 }
-
-    implicit def get_aux_json[S, M[_] <: JSON[_], Repr0 <: HList](
-        implicit
-        j: JSON.Aux[S, Repr0]
-    ) = inhabit_Type[M[S], Repr0]
-
-    implicit def get_aux_relation[S, M[_] <: Relation[_], Repr0 <: HList](
-        implicit
-        r: Relation.Aux[S, Repr0]
-    ) = inhabit_Type[M[S], Repr0]
-
-    implicit def get_aux_graph[S, SID, DID, M[_, _, _] <: Graph[_, _, _], E0 <: HList, V0 <: HList](
-        implicit
-        g: Graph.Aux[S, SID, DID, E0, V0]
-    ) = inhabit_Type[M[S, SID, DID], E0]
+    def JSON(implicit j: ValidJSON[HNil]) = j(List(HNil))
+    def Relation(implicit r: ValidRelation[HNil]) = r(List(HNil))
+    def Graph(implicit g: ValidGraph[(Field[W.`'id`.T, Int] :: HNil) :: (Field[W.`'id`.T, Int] :: HNil) :: HNil, W.`'id`.T, W.`'id`.T]) = g(List((field[W.`'id`.T](0)::HNil) :: (field[W.`'id`.T](0)::HNil) :: HNil))
 }

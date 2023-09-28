@@ -5,7 +5,7 @@ import shapeless.{HList, HNil, ::, Typeable, Lazy}
 import scala.reflect.runtime.universe.{TypeTag, WeakTypeTag}
 
 import pridwen.support.{UPrepend, ToHList}
-import pridwen.models.{Model, GetModelRepr}
+import pridwen.models.{Model}
 
 object display {
     // To select and display one path-dependant type

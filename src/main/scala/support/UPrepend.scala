@@ -5,7 +5,6 @@ import shapeless.labelled.{FieldType}
 import shapeless.ops.hlist.{Modifier, Selector => HSelector, Prepend}
 import shapeless.ops.record.{Selector => RSelector}
 
-import pridwen.models.{Model}
 
 // Appends to L1 the elements contained in L2 they are not already in L1. Output type is the resulting HList.
 trait UPrepend[L1, L2] { type Out <: HList }

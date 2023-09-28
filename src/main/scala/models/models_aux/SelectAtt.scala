@@ -42,4 +42,11 @@ object SelectAtt {
     ) = inhabit_Type[S, As[A, P], A, VOut0](
         (s: S) => field[A](getFieldValue(sa.value(s)))
     )
+
+    implicit def field_name[S <: HList, A <: Symbol, K, V](
+        implicit
+        rs: RSelector.Aux[S, A, K, V]
+    ) = inhabit_Type[S, A, K, V](
+        (s: S) => field[K](rs(s))
+    )
 }

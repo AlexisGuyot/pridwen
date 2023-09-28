@@ -7,19 +7,22 @@ import java.time.{LocalDate => Date}
 
 import pridwen.support.{DeepGeneric}
 
-abstract class JSON[S](dataset: List[S]) extends Model[S](dataset) 
-object JSON {
+abstract class JSON[S](dataset: List[S]) extends Model[S](dataset)
+object JSON { 
     type Aux[S, Repr0 <: HList] = JSON[S] { type Repr = Repr0 }
-    def apply[S](dataset: List[S])(implicit ok: JSON[S]): Aux[S, ok.Repr] = new JSON[S](dataset) { type Repr = ok.Repr ; def toRepr(s: S) = ok.toRepr(s) }
-    private def inhabit_Type[S, Repr0 <: HList](f: S => Repr0): Aux[S, Repr0] = new JSON[S](List()) { type Repr = Repr0 ; def toRepr(s: S) = f(s) }
-    
-    //def load[S](j: JSON[S])(dataset: List[j.Repr]) = new JSON[j.Repr] { type Repr = j.Repr ; override val data = dataset ; def toRepr(s: j.Repr) = s }
-    def load[S](j: JSON[S])(dataset: List[S]) = new JSON[S](List()) { type Repr = j.Repr ; override val data = dataset.map(s => toRepr(s)) ; def toRepr(s: S) = j.toRepr(s) }
+    def apply[S](dataset: List[S])(implicit ok: ValidJSON[S]) = ok(dataset)
+}
+
+trait ValidJSON[S] { type Out <: HList ; def apply(dataset: List[S]): JSON.Aux[S, Out] }
+object ValidJSON {
+    def apply[S](implicit ok: ValidJSON[S]): Aux[S, ok.Out] = ok
+    type Aux[S, Out0 <: HList] = ValidJSON[S] { type Out = Out0 }
+    protected def inhabit_Type[S, Repr0 <: HList](f: S => Repr0): Aux[S, Repr0] = new ValidJSON[S] { type Out = Repr0 ; def apply(dataset: List[S]) = new JSON[S](dataset) { type Repr = Repr0 ; def toRepr(s: S) = f(s) } ; type T = JSON.Aux[S, Repr0] }
 
     implicit def case_class_schema[CCS <: Product, S <: HList](
         implicit
         gen: DeepGeneric.Aux[CCS, S],
-        j: JSON[S]
+        j: ValidJSON[S]
     ) = inhabit_Type[CCS, S](
         (s: CCS) => gen.to(s)
     )
@@ -28,7 +31,7 @@ object JSON {
     implicit def schema_with_multiple_attributes[K, V, T <: HList](
         implicit
         r: JType[V],
-        i: JSON[T]
+        i: ValidJSON[T]
     ) = inhabit_Type[FieldType[K,V]::T, FieldType[K,V]::T](
         (s: FieldType[K,V]::T) => s
     )
@@ -46,6 +49,6 @@ object JSON {
         implicit def json_date = inhabit_JType[Date]
         //implicit def json_hlist = inhabit_JType[HList]
         implicit def json_multi[T : JType] = inhabit_JType[List[T]]
-        implicit def json_nested[H <: HList : JSON] = inhabit_JType[H]
+        implicit def json_nested[H <: HList : ValidJSON] = inhabit_JType[H]
     }
 }
