@@ -17,7 +17,7 @@ trait ValidRelation[S] { type Out <: HList ; def apply(dataset: List[S]): Relati
 object ValidRelation {
     def apply[S](implicit ok: ValidRelation[S]): Aux[S, ok.Out] = ok
     type Aux[S, Out0 <: HList] = ValidRelation[S] { type Out = Out0 }
-    protected def inhabit_Type[S, Repr0 <: HList](f: S => Repr0): Aux[S, Repr0] = new ValidRelation[S] { type Out = Repr0 ; def apply(dataset: List[S]) = new Relation[S](dataset) { type Repr = Repr0 ; def toRepr(s: S) = f(s) ; type T = Relation.Aux[S, Repr0] } }
+    protected def inhabit_Type[S, Repr0 <: HList](f: S => Repr0): Aux[S, Repr0] = new ValidRelation[S] { type Out = Repr0 ; def apply(dataset: List[S]) = new Relation[S](dataset) { type Repr = Repr0 ; def toRepr(s: S) = f(s) } }
 
     implicit def case_class_schema[CCS <: Product, S <: HList](
         implicit

@@ -73,9 +73,9 @@ object Main extends App {
         input_dataset, 
         W('user) :: W('id) :: HNil, 
         W('retweeted_status) :: W('user) :: W('id) :: HNil, 
-        (W('user) :: W('name) :: HNil) :: HNil,
-        As(W('test), W('retweeted_status) :: W('user) :: W('name) :: HNil) :: HNil,
-        HNil
+        //(W('user) :: W('name) :: HNil) :: HNil,
+        //As(W('test), W('retweeted_status) :: W('user) :: W('name) :: HNil) :: HNil,
+        HNil, HNil, HNil
     )
     val graph_rt_with_communities = transform(
         graph_rt,
@@ -90,9 +90,12 @@ object Main extends App {
             })
         }
     )
+    val graph_rt_nodes = nodes(graph_rt_with_communities, Model.Relation)
+
+    val workflow_output = graph_rt_nodes
     println("\nWorkflow output schema:")
-    println(show(Show[graph_rt_with_communities.Repr]))
+    println(show(workflow_output))
     println("\nWorkflow output:")
-    println(graph_rt_with_communities.data)
+    println(workflow_output.data)
     println()
 }

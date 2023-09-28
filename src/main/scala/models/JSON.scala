@@ -17,7 +17,7 @@ trait ValidJSON[S] { type Out <: HList ; def apply(dataset: List[S]): JSON.Aux[S
 object ValidJSON {
     def apply[S](implicit ok: ValidJSON[S]): Aux[S, ok.Out] = ok
     type Aux[S, Out0 <: HList] = ValidJSON[S] { type Out = Out0 }
-    protected def inhabit_Type[S, Repr0 <: HList](f: S => Repr0): Aux[S, Repr0] = new ValidJSON[S] { type Out = Repr0 ; def apply(dataset: List[S]) = new JSON[S](dataset) { type Repr = Repr0 ; def toRepr(s: S) = f(s) } ; type T = JSON.Aux[S, Repr0] }
+    protected def inhabit_Type[S, Repr0 <: HList](f: S => Repr0): Aux[S, Repr0] = new ValidJSON[S] { type Out = Repr0 ; def apply(dataset: List[S]) = new JSON[S](dataset) { type Repr = Repr0 ; def toRepr(s: S) = f(s) } }
 
     implicit def case_class_schema[CCS <: Product, S <: HList](
         implicit

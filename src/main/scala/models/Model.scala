@@ -6,7 +6,6 @@ import shapeless.labelled.{FieldType => Field, field}
 import pridwen.models.aux.{SelectAtt}
 
 abstract class Model[S](dataset: List[S]) { 
-    type T
     type Repr <: HList ; 
     def toRepr(s: S): Repr ; 
     val data: List[Repr] = dataset.map(s => toRepr(s))

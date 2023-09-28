@@ -41,6 +41,17 @@ object construct {
         res_model(d.asInstanceOf[List[Res_Schema]])
     }
 
+    def nodes[
+        S, SID, DID,
+        MO <: Model[_]
+    ](
+        dataset: Graph[S, SID, DID],
+        mout: MO
+    )(
+        implicit
+        get_nodes: GetNodes[dataset.Repr, MO]
+    ): get_nodes.Out = get_nodes(dataset.data)
+
 
 
     
