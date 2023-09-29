@@ -1,7 +1,7 @@
 package pridwen.models.aux
 
-import shapeless.{HList, HNil, ::, Lazy}
-import shapeless.ops.hlist.{Replacer, Reverse, Prepend}
+import shapeless.{HList, HNil, ::, Lazy, Witness}
+import shapeless.ops.hlist.{Replacer, Last, Prepend}
 import shapeless.labelled.{FieldType => Field, field}
 
 import pridwen.support.{RSelector, ToHList}
@@ -33,9 +33,10 @@ trait LowPriorityReplaceAtt extends LowerPriorityReplaceAtt {
 object ReplaceAtt extends LowPriorityReplaceAtt {
     def apply[S <: HList, P <: HList, NAN, NAT](implicit ok: ReplaceAtt[S, P, NAN, NAT]): Aux[S, P, NAN, NAT, ok.Out] = ok
 
-    implicit def keep_name[S <: HList, P <: HList, NAT, K, V, T <: HList, Out0 <: HList](
+    implicit def keep_name[S <: HList, P <: HList, K, NAT, T <: HList, Out0 <: HList]
+    (
         implicit
-        rv: Reverse.Aux[P, Field[K, V]::T],
+        l: Last.Aux[P, K],
         ra: Lazy[ReplaceAtt.Aux[S, P, K, NAT, Out0]]
     ) = inhabit_Type[S, P, HNil, NAT, Out0](
         (s: S, na: NAT) => ra.value(s, na)

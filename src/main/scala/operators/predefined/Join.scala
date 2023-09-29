@@ -25,7 +25,6 @@ object join {
         rdataset: MR,
         lkey: Path_To_Left_Key,
         rkey: Path_To_Right_Key,
-        mode: String,
         mout: MOut
     )(
         implicit
@@ -38,7 +37,7 @@ object join {
         rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
         concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
         res_model: ValidModel[MOut, New_Schema, HNil]
-    ): res_model.Out = join(ldataset, rdataset, lkey, rkey, mode, mout, HNil)(get_left_key, get_right_key, get_lk_siblings, get_rk_siblings, check_key_names, rename_lk, rename_rk, concat_siblings, res_model)
+    ): res_model.Out = join(ldataset, rdataset, lkey, rkey, mout, HNil)(get_left_key, get_right_key, get_lk_siblings, get_rk_siblings, check_key_names, rename_lk, rename_rk, concat_siblings, res_model)
 
     def join[
         ML <: Model[_], MR <: Model[_],
@@ -53,7 +52,6 @@ object join {
         rdataset: MR,
         lkey: Path_To_Left_Key,
         rkey: Path_To_Right_Key,
-        mode: String,
         mout: MOut,
         pmout: PMOut
     )(
