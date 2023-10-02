@@ -12,5 +12,5 @@ trait LowPriorityCheckFName {
 object CheckFName extends LowPriorityCheckFName {
     def apply[FN1, FN2](implicit ok: CheckFName[FN1, FN2]): Aux[FN1, FN2, ok.Out1, ok.Out2] = ok
 
-    implicit def same_name[FN] = inhabit_Type[FN, FN, W.`'left_key`.T, W.`'right_key`.T]
+    implicit def same_name[FN] = inhabit_Type[FN, FN, W.`'leftKey`.T, W.`'rightKey`.T]
 }

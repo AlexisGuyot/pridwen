@@ -27,9 +27,9 @@ object Main extends App {
         CC_InputSchema1(User(1268486302459767200L, "C"), RetweetedStatus(User(277430850L, "B"))),        
     )
     val dataset_cc2 = List(
-        CC_InputSchema2(User(0L, "A"), QuotedStatus(User(2L, "B"))),
-        CC_InputSchema2(User(0L, "A"), QuotedStatus(User(2L, "B"))),
-        CC_InputSchema2(User(1L, "C"), QuotedStatus(User(2L, "B"))),        
+        CC_InputSchema2(User(1268486802949767200L, "A"), QuotedStatus(User(277430850L, "B"))),
+        CC_InputSchema2(User(277430850L, "B"), QuotedStatus(User(1268486802949767200L, "A"))),
+        CC_InputSchema2(User(1268486302459767200L, "C"), QuotedStatus(User(1268486802949767200L, "A"))),        
     )
     //val dataset_hlist = dataset_cc.map(cc => gen2.to(cc))
     //val input_model = JSON[CC_InputSchema1]
@@ -104,20 +104,26 @@ object Main extends App {
         W('quoted_status) :: W('user) :: W('id) :: HNil, 
         HNil, HNil, HNil
     )
-    /* var joined_graph = join_in_right(
+    val joined_graph = join_in_right(
         graph_rt_nodes, graph_quotes,
-        (W('source) :: W('id) :: HNil, W('dest) :: W('id) :: HNil),
         W('id) :: HNil,
-        W('source) :: W('id) :: HNil
-    ) */
-
-    val workflow_output = graph_rt_nodes
+        W('source) :: W('id) :: HNil,
+        W('leftKey),
+        W('id)
+    )
+    val joined_graph2 = join_in_right(
+        graph_rt_nodes, joined_graph,
+        W('id) :: HNil,
+        W('dest) :: W('id) :: HNil,
+        W('leftKey),
+        W('leftKey)
+    )
+    
+    val workflow_output = joined_graph
     println(show("\nWorkflow output schema", workflow_output))
     println("\nWorkflow output:")
     println(workflow_output.data)
     println()
-
-    println(format_output("""pridwen.models.aux.ValidModel[pridwen.models.Graph[(Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil) :: (Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil) :: (Int with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("weight")],Int] :: shapeless.HNil) :: shapeless.HNil,Symbol with shapeless.tag.Tagged[String("id")],Symbol with shapeless.tag.Tagged[String("id")]]{type Repr = Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("source")],Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil] :: Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("dest")],Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil] :: Int with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("weight")],Int] :: shapeless.HNil with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("edge")],Int with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("weight")],Int] :: shapeless.HNil] :: shapeless.HNil; type E = Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("source")],Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil] :: Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("dest")],Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil] :: Int with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("weight")],Int] :: shapeless.HNil with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("edge")],Int with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("weight")],Int] :: shapeless.HNil] :: shapeless.HNil; type V = Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("nodes")],Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil] :: shapeless.HNil},shapeless.labelled.FieldType[shapeless.Witness.Aux[Symbol @@ String("source")]#T,shapeless.labelled.FieldType[Symbol with shapeless.tag.Tagged[String("left_key")],Long] :: String with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("community")],String] :: shapeless.labelled.FieldType[Symbol with shapeless.tag.Tagged[String("right_key")],Long] :: shapeless.HNil] :: Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("dest")],Long with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("id")],Long] :: shapeless.HNil] :: Int with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("weight")],Int] :: shapeless.HNil with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("edge")],Int with shapeless.labelled.KeyTag[Symbol with shapeless.tag.Tagged[String("weight")],Int] :: shapeless.HNil] :: shapeless.HNil,(shapeless.Witness.Aux[Symbol @@ String("source")] :: shapeless.Witness.Aux[Symbol @@ String("id")] :: shapeless.HNil, shapeless.Witness.Aux[Symbol @@ String("dest")] :: shapeless.Witness.Aux[Symbol @@ String("id")] :: shapeless.HNil)]"""))
 }
 
 //FieldType[HNil,(left_key -> Long) :: community -> String :: (right_key -> Long) :: HNil] :: dest -> (id -> Long :: HNil) :: edge -> (weight -> Int :: HNil) :: HNil

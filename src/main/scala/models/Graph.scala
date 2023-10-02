@@ -3,11 +3,11 @@ package pridwen.models
 import shapeless.{HList, HNil, ::, Witness, Lazy}
 import shapeless.labelled.{FieldType, field}
 import shapeless.ops.hlist.{Prepend}
-import shapeless.ops.record.{Selector => RSelector}
+//import shapeless.ops.record.{Selector => RSelector}
 
 import java.time.{LocalDate => Date}
 
-import pridwen.support.{DeepGeneric}
+import pridwen.support.{DeepGeneric, RSelector}
 import pridwen.support.functions.{getFieldValue, get}
 import pridwen.models.aux.{ValidModel}
 
@@ -69,11 +69,21 @@ object ValidGraph extends LowPriorityValidGraph {
         (s: SS :: DS :: ES :: HNil) => field[Witness.`'source`.T](s.head) :: field[Witness.`'dest`.T](s.tail.head) :: field[Witness.`'edge`.T](s.tail.tail.head) :: HNil
     )
 
-    implicit def edge_list_with_nested_fields[SK, DK, EK, SS <: HList, DS <: HList, ES <: HList, SID, DID, E0 <: HList, V0 <: HList](
+    implicit def edge_list_with_nested_fields[SK, DK, EK, SS <: HList, DS <: HList, ES <: HList, NS <: HList, SID, DID, E0 <: HList, V0 <: HList](
         implicit
-        g: ValidGraph.Aux[SS :: DS :: ES :: HNil, SID, DID, E0, V0]
-    ) = inhabit_Type[FieldType[SK, SS] :: FieldType[DK, DS] :: FieldType[EK, ES] :: HNil, SID, DID, E0, V0](
-        (s: FieldType[SK, SS] :: FieldType[DK, DS] :: FieldType[EK, ES] :: HNil) => g(List(getFieldValue(s.head) :: getFieldValue(s.tail.head) :: getFieldValue(s.tail.tail.head) :: HNil)).data.head
+        //g: ValidGraph.Aux[SS :: DS :: ES :: HNil, SID, DID, E0, V0]
+        i1: ValidRelation[SS],
+        i2: ValidRelation[DS],
+        i3: ValidRelation[ES],
+        s1: RSelector[SS, SID],
+        s2: RSelector[DS, DID],
+        p: Prepend.Aux[SS, DS, NS]
+    ) = inhabit_Type[
+        FieldType[SK, SS] :: FieldType[DK, DS] :: FieldType[EK, ES] :: HNil, SID, DID, 
+        FieldType[Witness.`'source`.T, SS] :: FieldType[Witness.`'dest`.T, DS] :: FieldType[Witness.`'edge`.T, ES] :: HNil, 
+        FieldType[Witness.`'nodes`.T, NS] :: HNil
+    ](
+        (s: FieldType[SK, SS] :: FieldType[DK, DS] :: FieldType[EK, ES] :: HNil) => field[Witness.`'source`.T](getFieldValue(s.head)) :: field[Witness.`'dest`.T](getFieldValue(s.tail.head)) :: field[Witness.`'edge`.T](getFieldValue(s.tail.tail.head)) :: HNil
     )
 }
 

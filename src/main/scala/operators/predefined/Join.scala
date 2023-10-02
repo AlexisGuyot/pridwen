@@ -1,6 +1,6 @@
 package pridwen.operators.predefined
 
-import shapeless.{HList, HNil}
+import shapeless.{HList, HNil, Witness}
 import shapeless.labelled.{FieldType => Field}
 import shapeless.ops.hlist.{Prepend}
 import shapeless.ops.record.{Renamer}
@@ -157,10 +157,15 @@ object join {
         reduced_right_path: ReducePath.Aux[Path_To_Right_Key, Reduced_RPath],
         update_rschema: ReplaceAtt.Aux[rdataset.Repr, Reduced_RPath, HNil, New_Schema, New_RSchema],
         res_model: ValidModel[MR, New_RSchema, HNil]
-    ): res_model.Out = join_in_right(ldataset, rdataset, HNil, lkey, rkey)(get_left_key, get_right_key, get_lk_siblings, get_rk_siblings, check_key_names, rename_lk, rename_rk, concat_siblings, reduced_right_path, update_rschema, res_model)
+    ): res_model.Out = {
+        val d = do_join(ldataset.data, rdataset.data, get_left_key.apply, get_right_key.apply, (lschema: ldataset.Repr, rschema: rdataset.Repr) =>
+            update_rschema(rschema, concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema))))
+        )
+        res_model(d)
+    }
 
     def join_in_right [
-        ML <: Model[_], RMP, MR <: Model[_],
+        ML <: Model[_], S, SID, DID, MR <: Model[_],
         Path_To_Left_Key <: HList, Path_To_Right_Key <: HList, Reduced_RPath <: HList,
         LK, RK, KT, RLK, RRK,
         Siblings_LK <: HList, Siblings_RK <: HList,
@@ -168,10 +173,11 @@ object join {
         New_Schema <: HList, New_RSchema <: HList
     ](
         ldataset: ML,
-        rdataset: MR,
-        right_mp: RMP,
+        rdataset: Graph[S, SID, DID],
         lkey: Path_To_Left_Key,
-        rkey: Path_To_Right_Key
+        rkey: Path_To_Right_Key,
+        newgraph_sourceID: Witness,
+        newgraph_destID: Witness
     )(
         implicit
         get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LK, KT],
@@ -184,8 +190,8 @@ object join {
         concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
         reduced_right_path: ReducePath.Aux[Path_To_Right_Key, Reduced_RPath],
         update_rschema: ReplaceAtt.Aux[rdataset.Repr, Reduced_RPath, HNil, New_Schema, New_RSchema],
-        res_model: ValidModel[MR, New_RSchema, RMP]
-    ): res_model.Out = {
+        res_model: ValidGraph[New_RSchema, newgraph_sourceID.T, newgraph_destID.T]
+    ): Graph.Aux[New_RSchema, newgraph_sourceID.T, newgraph_destID.T, res_model.E, res_model.V] = {
         val d = do_join(ldataset.data, rdataset.data, get_left_key.apply, get_right_key.apply, (lschema: ldataset.Repr, rschema: rdataset.Repr) =>
             update_rschema(rschema, concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema))))
         )

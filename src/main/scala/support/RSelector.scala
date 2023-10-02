@@ -26,10 +26,10 @@ object RSelector extends LowPriorityRSelector {
         (l: L) => s(l)
     )
 
-    implicit def p_is_witness[L <: HList, W <: Witness, V](
+    implicit def p_is_witness[L <: HList, K, W <: Witness, V](
         implicit
-        s: Selector.Aux[L, W#T, V]
-    ) = inhabit_Type[L, W, W#T, V](
+        s: Selector.Aux[L, K, V],
+    ) = inhabit_Type[L, Witness.Aux[K], K, V](
         (l: L) => s(l)
     )
 }
