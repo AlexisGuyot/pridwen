@@ -6,7 +6,7 @@ import shapeless.ops.hlist.{Prepend}
 import shapeless.ops.record.{Renamer}
 
 import pridwen.support.functions.{getFieldValue}
-import pridwen.support.{ReducePath}
+import pridwen.support.{ReducePath, UPrepend}
 import pridwen.models._
 import pridwen.models.aux.{SelectAtt, SelectManyAtt, SelectSiblings, ValidModel, ReplaceAtt}
 import pridwen.operators.aux.{CheckFName}
@@ -184,16 +184,18 @@ object join {
         get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RK, KT],
         get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LK],
         get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RK],
-        check_key_names: CheckFName.Aux[LK, RK, RLK, RRK],
-        rename_lk: Renamer.Aux[Siblings_LK, LK, RLK, LSchema],
-        rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
-        concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
+        //check_key_names: CheckFName.Aux[LK, RK, RLK, RRK],
+        //rename_lk: Renamer.Aux[Siblings_LK, LK, RLK, LSchema],
+        //rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
+        //concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
+        concat_siblings: UPrepend.Aux[Siblings_LK, Siblings_RK, New_Schema],
         reduced_right_path: ReducePath.Aux[Path_To_Right_Key, Reduced_RPath],
         update_rschema: ReplaceAtt.Aux[rdataset.Repr, Reduced_RPath, HNil, New_Schema, New_RSchema],
         res_model: ValidGraph[New_RSchema, newgraph_sourceID.T, newgraph_destID.T]
     ): Graph.Aux[New_RSchema, newgraph_sourceID.T, newgraph_destID.T, res_model.E, res_model.V] = {
         val d = do_join(ldataset.data, rdataset.data, get_left_key.apply, get_right_key.apply, (lschema: ldataset.Repr, rschema: rdataset.Repr) =>
-            update_rschema(rschema, concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema))))
+            //update_rschema(rschema, concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema))))
+            update_rschema(rschema, concat_siblings(get_lk_siblings(lschema), get_rk_siblings(rschema)))
         )
         res_model(d)
     }

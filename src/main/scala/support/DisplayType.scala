@@ -1,11 +1,13 @@
 package pridwen.support
 
-import shapeless.{HList, HNil, ::, Typeable, Lazy}
+import shapeless.{HList, HNil, ::, Typeable, Lazy, Witness}
+import shapeless.labelled.{FieldType}
 
 import scala.reflect.runtime.universe.{TypeTag, WeakTypeTag}
 
 import pridwen.support.{UPrepend, ToHList}
 import pridwen.models.{Model}
+import pridwen.models.aux.{PrintSchema}
 
 object display {
     // To select and display one path-dependant type
@@ -32,6 +34,25 @@ object display {
     ) = "Bonjour" //s"${format_output(t1.toString())}\nabc\n${show(Show[Schema2])}" */
     
     def show_model[S <: HList : TypeTag] = println(show[S])
+
+    def show_dataset[M <: Model[_], Repr0 <: HList](dataset: M, name: String = "Dataset")(
+        implicit
+        //to_list: ToHList.Aux[dataset.Repr, Repr0],
+        //tag: TypeTag[Repr0]
+        schema: PrintSchema[dataset.Repr]
+    ): Unit = {
+        val m: String = dataset match {
+            case r: pridwen.models.Relation[_] => "Relation"
+            case j: pridwen.models.JSON[_] => "JSON"
+            case g: pridwen.models.Graph[_,_,_] => "Graph"
+            case _ => "Model"
+        }
+        //val s: String = show(tag)
+        println(s"============= ${name}")
+        println(s"Model: ${m}")
+        println(s"Schema: \n${schema()}")
+        println("=======================================")
+    }
 
     def print_operator(show_in: String, show_mid: String, show_out: String) = {
         println(format_show("In", show_in))
@@ -70,13 +91,7 @@ object display {
 
     def format_output(s: String) = {
         var res = basic_format_output(s).replace("schema.", "").replace("HList :: HNil", "HList")
-
-        // Format field types.
         var tmp = ""
-        do {
-            tmp = res
-            res = """FieldType\[Symbol with Tagged\[String\("([^"]+)"\)\],((?:(?:[\w()]+| -> )(?: :: )?)+(?:HNil)?)\]|FieldType\[Symbol with Tagged\[String\("([^"]+)"\)\],((?:(?:(\R))(?: :: )?)+(?:HNil)?)\]""".r.replaceAllIn(res, "($1 -> $2)")
-        } while(res != tmp)
 
         // Format not nested field types.
         res = """([a-zA-Z0-9]+) with KeyTag\[Symbol with Tagged\[String\("([\S]+)"\)\],([a-zA-Z0-9]+)\]""".r.replaceAllIn(res, """$2 -> $1""")
@@ -114,6 +129,13 @@ object display {
         res = res.replace("pridwen.models.", "")
         res = """Multiple2\[([^,]+),(.+)\]\{(?:type Schema = )?Product(?:2)?\[(\1) :: HNil,(\2) :: HNil\] :: HNil\}""".r.replaceAllIn(res, "Multiple[$1, $2]")
         res = """Multiple2\[(\w+\{(.+)\}),(\w+\{(.+)\})\]\{(?:type Schema = )?Product(?:2)?\[\2,\4\] :: HNil\}""".r.replaceAllIn(res, "Multiple[$1, $3]")
+
+        // Format field types.
+        tmp = ""
+        do {
+            tmp = res
+            res = """FieldType\[Symbol with Tagged\[String\("([^"]+)"\)\],((?:(?:[\w()]+| -> )(?: :: )?)+(?:HNil)?)\]|FieldType\[Symbol with Tagged\[String\("([^"]+)"\)\],((?:(?:(\R))(?: :: )?)+(?:HNil)?)\]""".r.replaceAllIn(res, "$1 -> ($2)")
+        } while(res != tmp)
 
 
         // Format auxiliary types

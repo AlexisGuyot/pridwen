@@ -108,22 +108,22 @@ object Main extends App {
         graph_rt_nodes, graph_quotes,
         W('id) :: HNil,
         W('source) :: W('id) :: HNil,
-        W('leftKey),
-        W('id)
+        W('id), W('id)
     )
     val joined_graph2 = join_in_right(
         graph_rt_nodes, joined_graph,
         W('id) :: HNil,
         W('dest) :: W('id) :: HNil,
-        W('leftKey),
-        W('leftKey)
+        W('id), W('id)
     )
+    val adj_matrix = adjacency_matrix(joined_graph2, W('weight))
+    println(adj_matrix)
+    val comm_matrix = community_matrix(joined_graph2, W('community))
+    println(comm_matrix)
     
-    val workflow_output = joined_graph
-    println(show("\nWorkflow output schema", workflow_output))
+    val workflow_output = joined_graph2
+    show_dataset(workflow_output, "Workflow Output")
     println("\nWorkflow output:")
     println(workflow_output.data)
     println()
 }
-
-//FieldType[HNil,(left_key -> Long) :: community -> String :: (right_key -> Long) :: HNil] :: dest -> (id -> Long :: HNil) :: edge -> (weight -> Int :: HNil) :: HNil
