@@ -9,30 +9,29 @@ import pridwen.models.aux.{SelectAtt}
 import pridwen.support.functions.{getFieldValue}
 
 object graph {
-    def nodes[
-        S, SID, DID,
-        MO <: Model[_]
-    ](
-        dataset: Graph[S, SID, DID],
-        mout: MO
+    // Idée d'amélioration : Passer ces fonctions dans le type Graph directement pour des appels du type mon_graphe.nodes ou mon_graphe.adjacency_matrix, etc.
+
+    def nodes[S, SourceID, DestID, ModelOut <: Model[_]](
+        dataset: Graph[S, SourceID, DestID],
+        mout: ModelOut
     )(
         implicit
-        get_nodes: GetNodes[dataset.Repr, MO]
+        get_nodes: GetNodes[dataset.Repr, ModelOut]
     ): get_nodes.Out = get_nodes(dataset.data)
 
     def adjacency_matrix[
-        S, SID, DID,
-        SIDT, DIDT
+        S, SourceID, DestID,
+        SourceIDT, DestIDT
     ](
-        dataset: Graph[S, SID, DID],
+        dataset: Graph[S, SourceID, DestID],
         weight: Witness
     )(
         implicit
-        get_source_id: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: SID :: HNil, SID, SIDT],
-        get_dest_id: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: DID :: HNil, DID, DIDT],
+        get_source_id: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, SourceIDT],
+        get_dest_id: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, DestIDT],
         get_edge_weight: SelectAtt.Aux[dataset.Repr, Witness.`'edge`.T :: weight.T :: HNil, weight.T, Int]
-    ): Map[SIDT, Map[DIDT, Int]] = {
-        var m: Map[SIDT, Map[DIDT, Int]] = Map()
+    ): Map[SourceIDT, Map[DestIDT, Int]] = {
+        var m: Map[SourceIDT, Map[DestIDT, Int]] = Map()
         dataset.data.foreach(hlist => {
             val source_id = getFieldValue(get_source_id(hlist))
             val dest_id = getFieldValue(get_dest_id(hlist))
@@ -45,14 +44,14 @@ object graph {
     }
 
     def community_matrix[
-        S, SID, DID, NT, CT
+        S, SourceID, DestID, NT, CT
     ](
-        dataset: Graph[S, SID, DID],
+        dataset: Graph[S, SourceID, DestID],
         community_att: Witness
     )(
         implicit
-        get_source_id: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: SID :: HNil, SID, NT],
-        get_dest_id: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: DID :: HNil, DID, NT],
+        get_source_id: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, NT],
+        get_dest_id: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, NT],
         get_source_community: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: community_att.T :: HNil, community_att.T, CT],
         get_dest_community: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: community_att.T :: HNil, community_att.T, CT],
     ): Map[NT, Map[CT, Boolean]] = {

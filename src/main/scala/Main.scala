@@ -64,7 +64,7 @@ object Main extends App {
         W('retweeted_status) :: W('user) :: W('id) :: HNil, 
         //(W('user) :: W('name) :: HNil) :: HNil,
         //As(W('test), W('retweeted_status) :: W('user) :: W('name) :: HNil) :: HNil,
-        HNil, HNil, HNil
+        //HNil, HNil, HNil
     )
 
     // Step 2: Détection des communautés dans le graphe des retweets
@@ -121,4 +121,8 @@ object Main extends App {
     // Affichage des résultats
     show_dataset(workflow_output, "Workflow Output")
     println()
+
+
+
+    // Idée d'amélioration : utiliser des DataSet en interne des différents types pour meilleure gestion des gros volumes de données.
 }
