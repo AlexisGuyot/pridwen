@@ -45,6 +45,7 @@ object Main extends App {
     val input_dataset2 = JSON[TweetsQuotes](dataset_tweets_quotes)
 
     // Idée d'amélioration : que le schéma réel de dataset_tweets_rt ou dataset_tweets_quotes ne soit pas forcément strictement égal à TweetsRT ou TweetsQuotes mais inclus (= possède au moins les attributs spécifiés dans TweetsRT/TweetsQuotes)
+    // Suite : charger de vraies données
 
 
 
