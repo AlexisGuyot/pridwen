@@ -46,25 +46,21 @@ object display {
             case g: pridwen.models.Graph[_,_,_] => "Graph"
             case _ => "Model"
         }
-        println(s"============= ${name}")
-        println(s"Model: ${m}")
+        println(s"============= ${name}\n")
+        println(s"Model: ${m}\n")
         println(s"Schema: \n${schema()}")
-        println(s"Data: ${dataset.data}")
-        println("=======================================")
+        println(s"Data: ${dataset.data}\n")
+        println("=======================================\n")
     }
-    def show_dataset[T](dataset: T, name: String)
+    def show_dataset_nomodel[T](dataset: T, name: String)
     (
         implicit
-        //tag: ClassTag[T]
-        //tag: WeakTypeTag[T]
         print_dataset: PrintType[T]
     ): Unit = {
-        //val tag = classTag[T]
-        println(s"============= ${name}")
-        //println(s"Type: ${tag.toString}")
-        println(s"Type: ${print_dataset.apply}")
-        println(s"Value: ${dataset}")
-        println("=======================================")
+        println(s"============= ${name}\n")
+        println(s"Type: ${print_dataset.apply}\n")
+        println(s"Value: ${dataset}\n")
+        println("=======================================\n")
     }
 
     def print_operator(show_in: String, show_mid: String, show_out: String) = {

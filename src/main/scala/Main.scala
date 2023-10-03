@@ -67,6 +67,8 @@ object Main extends App {
         //HNil, HNil, HNil
     )
 
+    show_dataset(graph_rt, "Graph of Retweets")
+
     // Step 2: Détection des communautés dans le graphe des retweets
     val graph_rt_with_communities = transform(
         graph_rt,
@@ -82,8 +84,12 @@ object Main extends App {
         }
     )
 
+    show_dataset(graph_rt_with_communities, "Graph of Retweets (with communities)")
+
     // Step 3: Récupération des sommets du graphe des retweets
     val graph_rt_nodes = nodes(graph_rt_with_communities, Model.Relation)
+
+    show_dataset(graph_rt_nodes, "Graph of Retweets Nodes")
 
     // Step 4: Construction du graphe des quotes
     val graph_quotes = constructGraph(
@@ -92,6 +98,8 @@ object Main extends App {
         W('quoted_status) :: W('user) :: W('id) :: HNil, 
         HNil, HNil, HNil
     )
+
+    show_dataset(graph_quotes, "Graph of Quotes")
 
     // Step 5: Jointure des deux graphes (seuls les sommets en commun sont conservés (inner), les sommets du graphe résultat récupèrent l'attribut de communauté)
     val joined_graph = join_in_right(
@@ -107,19 +115,24 @@ object Main extends App {
         W('id), W('id)
     )
 
+    show_dataset(joined_graph2, "Joined Graph (Quote-RT)")
+
     // Step 6: Construction de la matrice d'adjacence du graphe joint (matrice carrée d'entiers (poids) indicée par les ID des sommets)
     val adj_matrix = adjacency_matrix(joined_graph2, W('weight))
 
+    show_dataset_nomodel(adj_matrix, "Adjacency Matrix")
+
     // Step 7: Construction de la matrice des communautés du graphe joint (matrice de booléens indicée par les ID des sommets et par les valeurs distinctes des communautés)
     val comm_matrix = community_matrix(joined_graph2, W('community))
+
+    show_dataset_nomodel(comm_matrix, "Community Matrix")
 
     // Step 8: Calcul de la polarisation
     val workflow_output = (
         (adj: adj_matrix.type, comm: comm_matrix.type) => { val nb_commu = comm.values.map(_.keys.toList).toList.flatten.distinct.length ; (List.fill(nb_commu){List.fill(nb_commu){0}}, List.fill(nb_commu){List.fill(nb_commu){0}}) }
     )(adj_matrix, comm_matrix)
-    
-    // Affichage des résultats
-    show_dataset(workflow_output, "Workflow Output")
+
+    show_dataset_nomodel(workflow_output, "Workflow Output")
     println()
 
 
