@@ -9,15 +9,29 @@ import pridwen.models.{Model, Graph, ValidGraph}
 import pridwen.support.{EquivHList}
 
 object transform {
-    def transform[MI <: Model[_], T <: HList, S <: HList, New_Schema <: HList, Out](dataset: MI, transformations: T)(f: dataset.type => List[New_Schema])(
+    def transform [
+        ModelIn <: Model[_], Transformations <: HList, New_Schema <: HList
+    ](
+        dataset: ModelIn, 
+        transformations: Transformations
+    )(
+        f: dataset.type => List[New_Schema]
+    )(
         implicit
-        update_schema: UpdateSchema.Aux[dataset.Repr, T, New_Schema],
+        update_schema: UpdateSchema.Aux[dataset.Repr, Transformations, New_Schema],
         res_model: ValidModel[dataset.type, New_Schema, HNil]
     ): res_model.Out = res_model(f(dataset))
 
-    def transform[MI <: Model[_], T <: HList, S, SID, DID, New_Schema <: HList, Out](dataset: Graph[S, SID, DID], transformations: T)(f: dataset.type => List[New_Schema])(
+    def transform [
+        Schema, SourceID, DestID, Transformations <: HList, New_Schema <: HList
+    ](
+        dataset: Graph[Schema, SourceID, DestID], 
+        transformations: Transformations
+    )(
+        f: dataset.type => List[New_Schema]
+    )(
         implicit
-        update_schema: UpdateSchema.Aux[dataset.Repr, T, New_Schema],
-        res_model: ValidGraph[New_Schema, SID, DID]
-    ): Graph.Aux[New_Schema, SID, DID, res_model.E, res_model.V] = res_model(f(dataset))
+        update_schema: UpdateSchema.Aux[dataset.Repr, Transformations, New_Schema],
+        res_model: ValidGraph[New_Schema, SourceID, DestID]
+    ): Graph.Aux[New_Schema, SourceID, DestID, res_model.E, res_model.V] = res_model(f(dataset))
 }
