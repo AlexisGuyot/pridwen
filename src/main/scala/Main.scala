@@ -1,81 +1,63 @@
 package pridwen
 
 object Main extends App {  
-    import shapeless.{HList, ::, HNil, Witness => W, LabelledGeneric}
+    import shapeless.{HList, ::, HNil, Witness => W}
     import shapeless.labelled.{FieldType => Field, field}
     import pridwen.models._
-    import pridwen.models.aux.{SelectAtt, As, SelectManyAtt, SelectSiblings}
+    import pridwen.models.aux.{As}
     import pridwen.models.aux.transformations.{Add, Update}
     import pridwen.support.display._
-    import pridwen.support.{DeepGeneric}
     import pridwen.support.functions.{get}
     import pridwen.operators.predefined.construct._
     import pridwen.operators.predefined.join._
     import pridwen.operators.predefined.transform._
+    import pridwen.operators.predefined.graph._
     
-    type InputSchema1 = Field[W.`'user`.T, Field[W.`'id`.T, Long] :: HNil] :: Field[W.`'retweeted_status`.T, Field[W.`'user`.T, Field[W.`'id`.T, Long] :: HNil] :: HNil] :: HNil
+    //type InputSchema1 = Field[W.`'user`.T, Field[W.`'id`.T, Long] :: HNil] :: Field[W.`'retweeted_status`.T, Field[W.`'user`.T, Field[W.`'id`.T, Long] :: HNil] :: HNil] :: HNil
+
+
+    // =============== Déclaration schéma(s) d'entrée
+
     case class User(id: Long, name: String)
+
     case class RetweetedStatus(user: User)
     case class QuotedStatus(user: User)
-    case class CC_InputSchema1(user: User, retweeted_status: RetweetedStatus)
-    case class CC_InputSchema2(user: User, quoted_status: QuotedStatus)
-    //val gen2 = DeepGeneric[CC_InputSchema1]
 
-    val dataset_cc1 = List(
-        CC_InputSchema1(User(1268486802949767200L, "A"), RetweetedStatus(User(277430850L, "B"))),
-        CC_InputSchema1(User(1268486802949767200L, "A"), RetweetedStatus(User(277430850L, "B"))),
-        CC_InputSchema1(User(1268486302459767200L, "C"), RetweetedStatus(User(277430850L, "B"))),        
+    case class TweetsRT(user: User, retweeted_status: RetweetedStatus)
+    case class TweetsQuotes(user: User, quoted_status: QuotedStatus)
+
+
+
+    // =============== Chargement des données
+
+    val dataset_tweets_rt = List(
+        TweetsRT(User(1268486802949767200L, "A"), RetweetedStatus(User(277430850L, "B"))),
+        TweetsRT(User(1268486802949767200L, "A"), RetweetedStatus(User(277430850L, "B"))),
+        TweetsRT(User(1268486302459767200L, "C"), RetweetedStatus(User(277430850L, "B"))),        
     )
-    val dataset_cc2 = List(
-        CC_InputSchema2(User(1268486802949767200L, "A"), QuotedStatus(User(277430850L, "B"))),
-        CC_InputSchema2(User(277430850L, "B"), QuotedStatus(User(1268486802949767200L, "A"))),
-        CC_InputSchema2(User(1268486302459767200L, "C"), QuotedStatus(User(1268486802949767200L, "A"))),        
+    val dataset_tweets_quotes = List(
+        TweetsQuotes(User(1268486802949767200L, "A"), QuotedStatus(User(277430850L, "B"))),
+        TweetsQuotes(User(277430850L, "B"), QuotedStatus(User(1268486802949767200L, "A"))),
+        TweetsQuotes(User(1268486302459767200L, "C"), QuotedStatus(User(1268486802949767200L, "A"))),        
     )
-    //val dataset_hlist = dataset_cc.map(cc => gen2.to(cc))
-    //val input_model = JSON[CC_InputSchema1]
-    //val dataset_json = JSON.load(JSON[CC_InputSchema1])(dataset_cc)
 
-    /* val graph_rt = constructGraph(
-        JSON[CC_InputSchema1](dataset_cc), 
-        W('user) :: W('id) :: HNil, 
-        W('retweeted_status) :: W('user) :: W('id) :: HNil, 
-        (W('user) :: W('name) :: HNil) :: HNil,
-        As(W('test), W('retweeted_status) :: W('user) :: W('name) :: HNil) :: HNil,
-        HNil
-    )
-    println("\nSchema graph_rt:")
-    println(show(graph_rt))
-    println("\nGraph_rt:")
-    println(graph_rt.data)
-    println()
+    val input_dataset1 = JSON[TweetsRT](dataset_tweets_rt)
+    val input_dataset2 = JSON[TweetsQuotes](dataset_tweets_quotes)
 
-    val rel_dataset = Relation[Field[W.`'id`.T, Long] :: Field[W.`'community`.T, Int] :: HNil](List(
-        field[W.`'id`.T](1268486802949767200L) :: field[W.`'community`.T](1) :: HNil,
-        field[W.`'id`.T](1268486302459767200L) :: field[W.`'community`.T](2) :: HNil,
-        field[W.`'id`.T](4586302459767200L) :: field[W.`'community`.T](3) :: HNil
-    ))
-    val joined_dataset = join(
-        graph_rt, rel_dataset,
-        W('source) :: W('id) :: HNil,
-        W('id) :: HNil,
-        "inner",
-        Model.JSON
-    )
-    println("\nSchema joined_dataset:")
-    println(show(joined_dataset))
-    println("\nJoined_dataset:")
-    println(joined_dataset.data) */
+    // Idée d'amélioration : que le schéma réel de dataset_tweets_rt ou dataset_tweets_quotes ne soit pas forcément strictement égal à TweetsRT ou TweetsQuotes mais inclus (= possède au moins les attributs spécifiés dans TweetsRT/TweetsQuotes)
 
-    //println(show(Decompose[Relation[Field[W.`'id`.T, Long] :: Field[W.`'community`.T, Int] :: HNil]]))
 
-    /* val dataset = JSON[CC_InputSchema1](dataset_cc)
-    val test = add(dataset, W('retweeted_status) :: HNil, W('test), (x: dataset.Repr) => 0)
-    println(show(test))
-    println(test.data) */
+
+
+    // =============== Fonctions auxiliaires
+    
     def get_community(node_id: Long): String = node_id match { case 1268486802949767200L => "C1" ; case 277430850L => "C1" ; case 1268486302459767200L => "C3" }
 
-    val input_dataset1 = JSON[CC_InputSchema1](dataset_cc1)
-    val input_dataset2 = JSON[CC_InputSchema2](dataset_cc2)
+
+
+    // =============== Construction du workflow
+
+    // Step 1: Construction du graphe des retweets
     val graph_rt = constructGraph(
         input_dataset1, 
         W('user) :: W('id) :: HNil, 
@@ -84,6 +66,8 @@ object Main extends App {
         //As(W('test), W('retweeted_status) :: W('user) :: W('name) :: HNil) :: HNil,
         HNil, HNil, HNil
     )
+
+    // Step 2: Détection des communautés dans le graphe des retweets
     val graph_rt_with_communities = transform(
         graph_rt,
         Add[String](W('source) :: HNil, W('community)) ::
@@ -97,13 +81,19 @@ object Main extends App {
             })
         }
     )
+
+    // Step 3: Récupération des sommets du graphe des retweets
     val graph_rt_nodes = nodes(graph_rt_with_communities, Model.Relation)
+
+    // Step 4: Construction du graphe des quotes
     val graph_quotes = constructGraph(
         input_dataset2, 
         W('user) :: W('id) :: HNil, 
         W('quoted_status) :: W('user) :: W('id) :: HNil, 
         HNil, HNil, HNil
     )
+
+    // Step 5: Jointure des deux graphes (seuls les sommets en commun sont conservés (inner), les sommets du graphe résultat récupèrent l'attribut de communauté)
     val joined_graph = join_in_right(
         graph_rt_nodes, graph_quotes,
         W('id) :: HNil,
@@ -116,12 +106,19 @@ object Main extends App {
         W('dest) :: W('id) :: HNil,
         W('id), W('id)
     )
+
+    // Step 6: Construction de la matrice d'adjacence du graphe joint (matrice carrée d'entiers (poids) indicée par les ID des sommets)
     val adj_matrix = adjacency_matrix(joined_graph2, W('weight))
-    println(adj_matrix)
+
+    // Step 7: Construction de la matrice des communautés du graphe joint (matrice de booléens indicée par les ID des sommets et par les valeurs distinctes des communautés)
     val comm_matrix = community_matrix(joined_graph2, W('community))
-    println(comm_matrix)
+
+    // Step 8: Calcul de la polarisation
+    val workflow_output = (
+        (adj: adj_matrix.type, comm: comm_matrix.type) => { val nb_commu = comm.values.map(_.keys.toList).toList.flatten.distinct.length ; (List.fill(nb_commu){List.fill(nb_commu){0}}, List.fill(nb_commu){List.fill(nb_commu){0}}) }
+    )(adj_matrix, comm_matrix)
     
-    val workflow_output = adj_matrix
+    // Affichage des résultats
     show_dataset(workflow_output, "Workflow Output")
     println()
 }
