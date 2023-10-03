@@ -19,19 +19,21 @@ object graph {
         get_nodes: GetNodes[dataset.Repr, ModelOut]
     ): get_nodes.Out = get_nodes(dataset.data)
 
-    def adjacency_matrix[
+
+
+    def adjacency_matrix [
         S, SourceID, DestID,
-        SourceIDT, DestIDT
+        SourceID_Type, DestID_Type
     ](
         dataset: Graph[S, SourceID, DestID],
-        weight: Witness
+        weight_att: Witness
     )(
         implicit
-        get_source_id: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, SourceIDT],
-        get_dest_id: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, DestIDT],
-        get_edge_weight: SelectAtt.Aux[dataset.Repr, Witness.`'edge`.T :: weight.T :: HNil, weight.T, Int]
-    ): Map[SourceIDT, Map[DestIDT, Int]] = {
-        var m: Map[SourceIDT, Map[DestIDT, Int]] = Map()
+        get_source_id: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, SourceID_Type],
+        get_dest_id: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, DestID_Type],
+        get_edge_weight: SelectAtt.Aux[dataset.Repr, Witness.`'edge`.T :: weight_att.T :: HNil, weight_att.T, Int]
+    ): Map[SourceID_Type, Map[DestID_Type, Int]] = {
+        var m: Map[SourceID_Type, Map[DestID_Type, Int]] = Map()
         dataset.data.foreach(hlist => {
             val source_id = getFieldValue(get_source_id(hlist))
             val dest_id = getFieldValue(get_dest_id(hlist))
@@ -43,19 +45,22 @@ object graph {
         m
     }
 
+
+
     def community_matrix[
-        S, SourceID, DestID, NT, CT
+        S, SourceID, DestID, 
+        NodeID_Type, Community_Type
     ](
         dataset: Graph[S, SourceID, DestID],
         community_att: Witness
     )(
         implicit
-        get_source_id: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, NT],
-        get_dest_id: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, NT],
-        get_source_community: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: community_att.T :: HNil, community_att.T, CT],
-        get_dest_community: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: community_att.T :: HNil, community_att.T, CT],
-    ): Map[NT, Map[CT, Boolean]] = {
-        var m: Map[NT, Map[CT, Boolean]] = Map()
+        get_source_id: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, NodeID_Type],
+        get_dest_id: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, NodeID_Type],
+        get_source_community: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: community_att.T :: HNil, community_att.T, Community_Type],
+        get_dest_community: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: community_att.T :: HNil, community_att.T, Community_Type],
+    ): Map[NodeID_Type, Map[Community_Type, Boolean]] = {
+        var m: Map[NodeID_Type, Map[Community_Type, Boolean]] = Map()
         dataset.data.foreach(hlist => {
             val source_id = getFieldValue(get_source_id(hlist))
             val dest_id = getFieldValue(get_dest_id(hlist))

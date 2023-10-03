@@ -8,63 +8,52 @@ import shapeless.ops.record.{Renamer}
 import pridwen.support.functions.{getFieldValue}
 import pridwen.support.{ReducePath, UPrepend}
 import pridwen.models._
-import pridwen.models.aux.{SelectAtt, SelectManyAtt, SelectSiblings, ValidModel, ReplaceAtt}
+import pridwen.models.aux.{SelectAtt, SelectSiblings, ValidModel, ReplaceAtt}
 import pridwen.operators.aux.{CheckFName}
 
 object join {
-    def join[
-        ML <: Model[_], MR <: Model[_],
-        Path_To_Left_Key <: HList, Path_To_Right_Key <: HList,
-        LK, RK, KT, RLK, RRK,
-        Siblings_LK <: HList, Siblings_RK <: HList,
-        LSchema <: HList, RSchema <: HList,
-        New_Schema <: HList,
-        MOut <: Model[_]
-    ](
-        ldataset: ML,
-        rdataset: MR,
-        lkey: Path_To_Left_Key,
-        rkey: Path_To_Right_Key,
-        mout: MOut
-    )(
-        implicit
-        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LK, KT],
-        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RK, KT],
-        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LK],
-        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RK],
-        check_key_names: CheckFName.Aux[LK, RK, RLK, RRK],
-        rename_lk: Renamer.Aux[Siblings_LK, LK, RLK, LSchema],
-        rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
-        concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
-        res_model: ValidModel[MOut, New_Schema, HNil]
-    ): res_model.Out = join(ldataset, rdataset, lkey, rkey, mout, HNil)(get_left_key, get_right_key, get_lk_siblings, get_rk_siblings, check_key_names, rename_lk, rename_rk, concat_siblings, res_model)
+    // Idées d'améliorations : Utiliser pridwen.models.aux.UpdateSchema pour simplifier les implicites, Décider de s'il faut garder CheckFName ou non, Support graphes pour la fonction join.
 
-    def join[
-        ML <: Model[_], MR <: Model[_],
+    private def do_join[LeftSchema <: HList, RightSchema <: HList, LeftKey, RightKey, LeftKey_Type, OutSchema <: HList](
+        left: List[LeftSchema],
+        right: List[RightSchema],
+        left_key: LeftSchema => Field[LeftKey,LeftKey_Type],
+        right_key: RightSchema => Field[RightKey,LeftKey_Type],
+        join: (LeftSchema, RightSchema) => OutSchema
+    ): List[OutSchema] = {
+        val d = scala.collection.mutable.ListBuffer.empty[OutSchema]
+        left.foreach(lschema => right.foreach(rschema => 
+            if(getFieldValue(left_key(lschema)) == getFieldValue(right_key(rschema))) join(lschema, rschema) +=: d
+        ))
+        d.to(List)
+    }
+
+
+
+    def join [
+        LeftModel <: Model[_], RightModel <: Model[_],
         Path_To_Left_Key <: HList, Path_To_Right_Key <: HList,
-        LK, RK, KT, RLK, RRK,
-        Siblings_LK <: HList, Siblings_RK <: HList,
-        LSchema <: HList, RSchema <: HList,
-        New_Schema <: HList,
-        MOut <: Model[_], PMOut
+        LeftKey, RightKey, KeyType, LeftKey2, RightKey2,
+        Siblings_LeftKey <: HList, Siblings_RightKey <: HList,
+        LeftSchema <: HList, RightSchema <: HList, New_Schema <: HList,
+        ModelOut <: Model[_]
     ](
-        ldataset: ML,
-        rdataset: MR,
+        ldataset: LeftModel,
+        rdataset: RightModel,
         lkey: Path_To_Left_Key,
         rkey: Path_To_Right_Key,
-        mout: MOut,
-        pmout: PMOut
+        mout: ModelOut
     )(
         implicit
-        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LK, KT],
-        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RK, KT],
-        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LK],
-        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RK],
-        check_key_names: CheckFName.Aux[LK, RK, RLK, RRK],
-        rename_lk: Renamer.Aux[Siblings_LK, LK, RLK, LSchema],
-        rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
-        concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
-        res_model: ValidModel[MOut, New_Schema, PMOut]
+        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LeftKey, KeyType],
+        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RightKey, KeyType],
+        check_key_names: CheckFName.Aux[LeftKey, RightKey, LeftKey2, RightKey2],
+        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LeftKey],
+        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RightKey],
+        rename_lk: Renamer.Aux[Siblings_LeftKey, LeftKey, LeftKey2, LeftSchema],
+        rename_rk: Renamer.Aux[Siblings_RightKey, RightKey, RightKey2, RightSchema],
+        concat_siblings: Prepend.Aux[LeftSchema, RightSchema, New_Schema],
+        res_model: ValidModel[ModelOut, New_Schema, HNil]
     ): res_model.Out = {
         val d = do_join(ldataset.data, rdataset.data, get_left_key.apply, get_right_key.apply, (lschema: ldataset.Repr, rschema: rdataset.Repr) =>
             concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema)))
@@ -72,59 +61,33 @@ object join {
         res_model(d)
     }
 
-    def join_in_left [
-        ML <: Model[_], MR <: Model[_],
-        Path_To_Left_Key <: HList, Reduced_LPath <: HList, Path_To_Right_Key <: HList,
-        LK, RK, KT, RLK, RRK,
-        Siblings_LK <: HList, Siblings_RK <: HList,
-        LSchema <: HList, RSchema <: HList,
-        New_Schema <: HList, New_LSchema <: HList
-    ](
-        ldataset: ML,
-        rdataset: MR,
-        lkey: Path_To_Left_Key,
-        rkey: Path_To_Right_Key
-    )(
-        implicit
-        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LK, KT],
-        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RK, KT],
-        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LK],
-        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RK],
-        check_key_names: CheckFName.Aux[LK, RK, RLK, RRK],
-        rename_lk: Renamer.Aux[Siblings_LK, LK, RLK, LSchema],
-        rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
-        concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
-        reduced_left_path: ReducePath.Aux[Path_To_Left_Key, Reduced_LPath],
-        update_lschema: ReplaceAtt.Aux[ldataset.Repr, Reduced_LPath, HNil, New_Schema, New_LSchema],
-        res_model: ValidModel[ML, New_LSchema, HNil]
-    ): res_model.Out = join_in_left(ldataset, HNil, rdataset, lkey, rkey)(get_left_key, get_right_key, get_lk_siblings, get_rk_siblings, check_key_names, rename_lk, rename_rk, concat_siblings, reduced_left_path, update_lschema, res_model)
+
 
     def join_in_left [
-        ML <: Model[_], LMP, MR <: Model[_],
-        Path_To_Left_Key <: HList, Reduced_LPath <: HList, Path_To_Right_Key <: HList,
-        LK, RK, KT, RLK, RRK,
-        Siblings_LK <: HList, Siblings_RK <: HList,
-        LSchema <: HList, RSchema <: HList,
-        New_Schema <: HList, New_LSchema <: HList
+        LeftModel <: Model[_], RightModel <: Model[_],
+        Path_To_Left_Key <: HList, Path_To_Right_Key <: HList, Reduced_LPath <: HList,
+        LeftKey, RightKey, KeyType, LeftKey2, RightKey2,
+        Siblings_LeftKey <: HList, Siblings_RightKey <: HList,
+        LeftSchema <: HList, RightSchema <: HList,
+        New_Schema <: HList, New_LeftSchema <: HList
     ](
-        ldataset: ML,
-        left_mp: LMP,
-        rdataset: MR,
+        ldataset: LeftModel,
+        rdataset: RightModel,
         lkey: Path_To_Left_Key,
         rkey: Path_To_Right_Key
     )(
         implicit
-        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LK, KT],
-        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RK, KT],
-        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LK],
-        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RK],
-        check_key_names: CheckFName.Aux[LK, RK, RLK, RRK],
-        rename_lk: Renamer.Aux[Siblings_LK, LK, RLK, LSchema],
-        rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
-        concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
+        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LeftKey, KeyType],
+        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RightKey, KeyType],
+        check_key_names: CheckFName.Aux[LeftKey, RightKey, LeftKey2, RightKey2],
+        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LeftKey],
+        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RightKey],
+        rename_lk: Renamer.Aux[Siblings_LeftKey, LeftKey, LeftKey2, LeftSchema],
+        rename_rk: Renamer.Aux[Siblings_RightKey, RightKey, RightKey2, RightSchema],
+        concat_siblings: Prepend.Aux[LeftSchema, RightSchema, New_Schema],
         reduced_left_path: ReducePath.Aux[Path_To_Left_Key, Reduced_LPath],
-        update_lschema: ReplaceAtt.Aux[ldataset.Repr, Reduced_LPath, HNil, New_Schema, New_LSchema],
-        res_model: ValidModel[ML, New_LSchema, LMP]
+        update_lschema: ReplaceAtt.Aux[ldataset.Repr, Reduced_LPath, HNil, New_Schema, New_LeftSchema],
+        res_model: ValidModel[LeftModel, New_LeftSchema, HNil]
     ): res_model.Out = {
         val d = do_join(ldataset.data, rdataset.data, get_left_key.apply, get_right_key.apply, (lschema: ldataset.Repr, rschema: rdataset.Repr) =>
             update_lschema(lschema, concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema))))
@@ -132,31 +95,65 @@ object join {
         res_model(d)
     }
 
-    def join_in_right [
-        ML <: Model[_], MR <: Model[_],
-        Path_To_Left_Key <: HList, Path_To_Right_Key <: HList, Reduced_RPath <: HList, 
-        LK, RK, KT, RLK, RRK,
-        Siblings_LK <: HList, Siblings_RK <: HList,
-        LSchema <: HList, RSchema <: HList,
-        New_Schema <: HList, New_RSchema <: HList
+    def join_in_left [
+        Schema, SourceID, DestID, RightModel <: Model[_],
+        Path_To_Left_Key <: HList, Reduced_LPath <: HList, Path_To_Right_Key <: HList,
+        LeftKey, RightKey, KeyType, LeftKey2, RightKey2,
+        Siblings_LeftKey <: HList, Siblings_RightKey <: HList,
+        LeftSchema <: HList, RightSchema <: HList,
+        New_Schema <: HList, New_LeftSchema <: HList
     ](
-        ldataset: ML,
-        rdataset: MR,
+        ldataset: Graph[Schema, SourceID, DestID],
+        rdataset: RightModel,
+        lkey: Path_To_Left_Key,
+        rkey: Path_To_Right_Key,
+        newgraph_sourceID: Witness,
+        newgraph_destID: Witness
+    )(
+        implicit
+        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LeftKey, KeyType],
+        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RightKey, KeyType],
+        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LeftKey],
+        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RightKey],
+        concat_siblings: UPrepend.Aux[Siblings_LeftKey, Siblings_RightKey, New_Schema],
+        reduced_left_path: ReducePath.Aux[Path_To_Left_Key, Reduced_LPath],
+        update_lschema: ReplaceAtt.Aux[ldataset.Repr, Reduced_LPath, HNil, New_Schema, New_LeftSchema],
+        res_model: ValidGraph[New_LeftSchema, newgraph_sourceID.T, newgraph_destID.T]
+    ): Graph.Aux[New_LeftSchema, newgraph_sourceID.T, newgraph_destID.T, res_model.E, res_model.V] = {
+        val d = do_join(ldataset.data, rdataset.data, get_left_key.apply, get_right_key.apply, (lschema: ldataset.Repr, rschema: rdataset.Repr) =>
+            update_lschema(lschema, concat_siblings(get_lk_siblings(lschema), get_rk_siblings(rschema)))
+        )
+        res_model(d)
+    }
+
+
+
+
+    def join_in_right [
+        LeftModel <: Model[_], RightModel <: Model[_],
+        Path_To_Left_Key <: HList, Path_To_Right_Key <: HList, Reduced_RPath <: HList, 
+        LeftKey, RightKey, KeyType, LeftKey2, RightKey2,
+        Siblings_LeftKey <: HList, Siblings_RightKey <: HList,
+        LeftSchema <: HList, RightSchema <: HList,
+        New_Schema <: HList, New_RightSchema <: HList
+    ](
+        ldataset: LeftModel,
+        rdataset: RightModel,
         lkey: Path_To_Left_Key,
         rkey: Path_To_Right_Key
     )(
         implicit
-        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LK, KT],
-        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RK, KT],
-        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LK],
-        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RK],
-        check_key_names: CheckFName.Aux[LK, RK, RLK, RRK],
-        rename_lk: Renamer.Aux[Siblings_LK, LK, RLK, LSchema],
-        rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
-        concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
+        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LeftKey, KeyType],
+        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RightKey, KeyType],
+        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LeftKey],
+        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RightKey],
+        check_key_names: CheckFName.Aux[LeftKey, RightKey, LeftKey2, RightKey2],
+        rename_lk: Renamer.Aux[Siblings_LeftKey, LeftKey, LeftKey2, LeftSchema],
+        rename_rk: Renamer.Aux[Siblings_RightKey, RightKey, RightKey2, RightSchema],
+        concat_siblings: Prepend.Aux[LeftSchema, RightSchema, New_Schema],
         reduced_right_path: ReducePath.Aux[Path_To_Right_Key, Reduced_RPath],
-        update_rschema: ReplaceAtt.Aux[rdataset.Repr, Reduced_RPath, HNil, New_Schema, New_RSchema],
-        res_model: ValidModel[MR, New_RSchema, HNil]
+        update_rschema: ReplaceAtt.Aux[rdataset.Repr, Reduced_RPath, HNil, New_Schema, New_RightSchema],
+        res_model: ValidModel[RightModel, New_RightSchema, HNil]
     ): res_model.Out = {
         val d = do_join(ldataset.data, rdataset.data, get_left_key.apply, get_right_key.apply, (lschema: ldataset.Repr, rschema: rdataset.Repr) =>
             update_rschema(rschema, concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema))))
@@ -165,14 +162,14 @@ object join {
     }
 
     def join_in_right [
-        ML <: Model[_], S, SID, DID, MR <: Model[_],
+        LeftModel <: Model[_], S, SID, DID, RightModel <: Model[_],
         Path_To_Left_Key <: HList, Path_To_Right_Key <: HList, Reduced_RPath <: HList,
-        LK, RK, KT, RLK, RRK,
-        Siblings_LK <: HList, Siblings_RK <: HList,
-        LSchema <: HList, RSchema <: HList,
-        New_Schema <: HList, New_RSchema <: HList
+        LeftKey, RightKey, KeyType, LeftKey2, RightKey2,
+        Siblings_LeftKey <: HList, Siblings_RightKey <: HList,
+        LeftSchema <: HList, RightSchema <: HList,
+        New_Schema <: HList, New_RightSchema <: HList
     ](
-        ldataset: ML,
+        ldataset: LeftModel,
         rdataset: Graph[S, SID, DID],
         lkey: Path_To_Left_Key,
         rkey: Path_To_Right_Key,
@@ -180,37 +177,23 @@ object join {
         newgraph_destID: Witness
     )(
         implicit
-        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LK, KT],
-        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RK, KT],
-        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LK],
-        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RK],
-        //check_key_names: CheckFName.Aux[LK, RK, RLK, RRK],
-        //rename_lk: Renamer.Aux[Siblings_LK, LK, RLK, LSchema],
-        //rename_rk: Renamer.Aux[Siblings_RK, RK, RRK, RSchema],
-        //concat_siblings: Prepend.Aux[LSchema, RSchema, New_Schema],
-        concat_siblings: UPrepend.Aux[Siblings_LK, Siblings_RK, New_Schema],
+        get_left_key: SelectAtt.Aux[ldataset.Repr, Path_To_Left_Key, LeftKey, KeyType],
+        get_right_key: SelectAtt.Aux[rdataset.Repr, Path_To_Right_Key, RightKey, KeyType],
+        get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LeftKey],
+        get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RightKey],
+        //check_key_names: CheckFName.Aux[LeftKey, RightKey, LeftKey2, RightKey2],
+        //rename_lk: Renamer.Aux[Siblings_LeftKey, LeftKey, LeftKey2, LeftSchema],
+        //rename_rk: Renamer.Aux[Siblings_RightKey, RightKey, RightKey2, RightSchema],
+        //concat_siblings: Prepend.Aux[LeftSchema, RightSchema, New_Schema],
+        concat_siblings: UPrepend.Aux[Siblings_LeftKey, Siblings_RightKey, New_Schema],
         reduced_right_path: ReducePath.Aux[Path_To_Right_Key, Reduced_RPath],
-        update_rschema: ReplaceAtt.Aux[rdataset.Repr, Reduced_RPath, HNil, New_Schema, New_RSchema],
-        res_model: ValidGraph[New_RSchema, newgraph_sourceID.T, newgraph_destID.T]
-    ): Graph.Aux[New_RSchema, newgraph_sourceID.T, newgraph_destID.T, res_model.E, res_model.V] = {
+        update_rschema: ReplaceAtt.Aux[rdataset.Repr, Reduced_RPath, HNil, New_Schema, New_RightSchema],
+        res_model: ValidGraph[New_RightSchema, newgraph_sourceID.T, newgraph_destID.T]
+    ): Graph.Aux[New_RightSchema, newgraph_sourceID.T, newgraph_destID.T, res_model.E, res_model.V] = {
         val d = do_join(ldataset.data, rdataset.data, get_left_key.apply, get_right_key.apply, (lschema: ldataset.Repr, rschema: rdataset.Repr) =>
             //update_rschema(rschema, concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema))))
             update_rschema(rschema, concat_siblings(get_lk_siblings(lschema), get_rk_siblings(rschema)))
         )
         res_model(d)
-    }
-
-    private def do_join[L <: HList, R <: HList, LK, RK, V, O <: HList](
-        left: List[L],
-        right: List[R],
-        left_key: L => Field[LK,V],
-        right_key: R => Field[RK,V],
-        join: (L, R) => O
-    ): List[O] = {
-        val d = scala.collection.mutable.ListBuffer.empty[O]
-        left.foreach(lschema => right.foreach(rschema => 
-            if(getFieldValue(left_key(lschema)) == getFieldValue(right_key(rschema))) join(lschema, rschema) +=: d
-        ))
-        d.to(List)
     }
 }
