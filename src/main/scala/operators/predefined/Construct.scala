@@ -7,7 +7,7 @@ import shapeless.labelled.{FieldType => Field, field}
 import shapeless.ops.hlist.{IsHCons}
 
 import pridwen.models._
-import pridwen.models.aux.{SelectAtt, SelectManyAtt, SelectSiblings}
+import pridwen.models.aux.{SelectField, SelectManyFields, SelectSiblings}
 import pridwen.support.functions.{getFieldValue}
 
 object construct {
@@ -22,8 +22,8 @@ object construct {
         dest: Path_To_Dest_ID
     )(
         implicit
-        get_source_id: SelectAtt.Aux[dataset.Repr, Path_To_Source_ID, SourceID_Name, NodeID_Type],
-        get_dest_id: SelectAtt.Aux[dataset.Repr, Path_To_Dest_ID, DestID_Name, NodeID_Type],
+        get_source_id: SelectField.Aux[dataset.Repr, Path_To_Source_ID, SourceID_Name, NodeID_Type],
+        get_dest_id: SelectField.Aux[dataset.Repr, Path_To_Dest_ID, DestID_Name, NodeID_Type],
         res_schema: Res_Schema =:= ((Field[SourceID_Name, NodeID_Type] :: HNil) :: (Field[DestID_Name, NodeID_Type] :: HNil) :: (Field[W.`'weight`.T, Int] :: HNil) :: HNil),
         res_model: ValidGraph[Res_Schema, SourceID_Name, DestID_Name]
     ): Graph.Aux[Res_Schema, SourceID_Name, DestID_Name, res_model.E, res_model.V] = {
@@ -52,11 +52,11 @@ object construct {
         edge_att: Path_To_Edge_Att
     )(
         implicit
-        get_source_id: SelectAtt.Aux[dataset.Repr, Path_To_Source_ID, SourceID_Name, NodeID_Type],
-        get_dest_id: SelectAtt.Aux[dataset.Repr, Path_To_Dest_ID, DestID_Name, NodeID_Type],
-        get_source_att: SelectManyAtt.Aux[dataset.Repr, Path_To_Source_Att, Source_Att],
-        get_dest_att: SelectManyAtt.Aux[dataset.Repr, Path_To_Dest_Att, Dest_Att],
-        get_edge_att: SelectManyAtt.Aux[dataset.Repr, Path_To_Edge_Att, Edge_Att],
+        get_source_id: SelectField.Aux[dataset.Repr, Path_To_Source_ID, SourceID_Name, NodeID_Type],
+        get_dest_id: SelectField.Aux[dataset.Repr, Path_To_Dest_ID, DestID_Name, NodeID_Type],
+        get_source_att: SelectManyFields.Aux[dataset.Repr, Path_To_Source_Att, Source_Att],
+        get_dest_att: SelectManyFields.Aux[dataset.Repr, Path_To_Dest_Att, Dest_Att],
+        get_edge_att: SelectManyFields.Aux[dataset.Repr, Path_To_Edge_Att, Edge_Att],
         res_schema: Res_Schema =:= ((Field[SourceID_Name, NodeID_Type] :: Source_Att) :: (Field[DestID_Name, NodeID_Type] :: Dest_Att) :: (Field[W.`'weight`.T, Int] :: Edge_Att) :: HNil),
         res_model: ValidGraph[Res_Schema, SourceID_Name, DestID_Name]
     ): Graph.Aux[Res_Schema, SourceID_Name, DestID_Name, res_model.E, res_model.V] = {
@@ -85,7 +85,7 @@ object construct {
         relation_att: Path_To_Relation_Att
     )(
         implicit
-        get_relation_att: SelectManyAtt.Aux[dataset.Repr, Path_To_Relation_Att, Relation_Att],
+        get_relation_att: SelectManyFields.Aux[dataset.Repr, Path_To_Relation_Att, Relation_Att],
         res_model: ValidRelation[Relation_Att]
     ): Relation.Aux[Relation_Att, res_model.Out] = {
         val d = dataset.data.map(schema => get_relation_att(schema))
@@ -111,7 +111,7 @@ object construct {
         json_att: Path_To_JSON_Att
     )(
         implicit
-        get_json_att: SelectManyAtt.Aux[dataset.Repr, Path_To_JSON_Att, JSON_Att],
+        get_json_att: SelectManyFields.Aux[dataset.Repr, Path_To_JSON_Att, JSON_Att],
         res_model: ValidJSON[JSON_Att]
     ): JSON.Aux[JSON_Att, res_model.Out] = {
         val d = dataset.data.map(schema => get_json_att(schema))

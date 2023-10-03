@@ -9,7 +9,7 @@ import java.time.{LocalDate => Date}
 
 import pridwen.support.{DeepGeneric, RSelector}
 import pridwen.support.functions.{getFieldValue, get}
-import pridwen.models.aux.{ValidModel}
+import pridwen.models.aux.{IsValidSchema}
 
 
 abstract class Graph[S, SID, DID](dataset: List[S]) extends Model[S](dataset) {
@@ -94,8 +94,8 @@ trait LowPriorityGetNodes {
 
     implicit def source_schema_and_dest_schema_are_different[SS <: HList, DS <: HList, ES <: HList, MN <: Model[_]](
         implicit
-        m1: ValidModel[MN, SS, HNil],
-        m2: ValidModel[MN, DS, HNil]
+        m1: IsValidSchema[SS, MN, HNil],
+        m2: IsValidSchema[DS, MN, HNil]
     ) = inhabit_Type[FieldType[Witness.`'source`.T, SS] :: FieldType[Witness.`'dest`.T, DS] :: FieldType[Witness.`'edge`.T, ES] :: HNil, MN, (m1.Out, m2.Out)](
         (r: List[FieldType[Witness.`'source`.T, SS] :: FieldType[Witness.`'dest`.T, DS] :: FieldType[Witness.`'edge`.T, ES] :: HNil]) => {
             val d1 = scala.collection.mutable.ListBuffer.empty[SS]
@@ -111,7 +111,7 @@ object GetNodes extends LowPriorityGetNodes {
     implicit def source_schema_and_dest_schema_are_same[SS <: HList, DS <: HList, ES <: HList, MN <: Model[_]](
         implicit
         eq: SS =:= DS,
-        m: ValidModel[MN, DS, HNil]
+        m: IsValidSchema[DS, MN, HNil]
     ) = inhabit_Type[FieldType[Witness.`'source`.T, SS] :: FieldType[Witness.`'dest`.T, DS] :: FieldType[Witness.`'edge`.T, ES] :: HNil, MN, m.Out](
         (r: List[FieldType[Witness.`'source`.T, SS] :: FieldType[Witness.`'dest`.T, DS] :: FieldType[Witness.`'edge`.T, ES] :: HNil]) => { 
             val d = scala.collection.mutable.ListBuffer.empty[DS]

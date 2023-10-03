@@ -5,7 +5,7 @@ import shapeless.{HList, ::, HNil, Witness}
 import collection.mutable.Map
 
 import pridwen.models.{Graph, Model, GetNodes}
-import pridwen.models.aux.{SelectAtt}
+import pridwen.models.aux.{SelectField}
 import pridwen.support.functions.{getFieldValue}
 
 object graph {
@@ -29,9 +29,9 @@ object graph {
         weight_att: Witness
     )(
         implicit
-        get_source_id: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, SourceID_Type],
-        get_dest_id: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, DestID_Type],
-        get_edge_weight: SelectAtt.Aux[dataset.Repr, Witness.`'edge`.T :: weight_att.T :: HNil, weight_att.T, Int]
+        get_source_id: SelectField.Aux[dataset.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, SourceID_Type],
+        get_dest_id: SelectField.Aux[dataset.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, DestID_Type],
+        get_edge_weight: SelectField.Aux[dataset.Repr, Witness.`'edge`.T :: weight_att.T :: HNil, weight_att.T, Int]
     ): Map[SourceID_Type, Map[DestID_Type, Int]] = {
         var m: Map[SourceID_Type, Map[DestID_Type, Int]] = Map()
         dataset.data.foreach(hlist => {
@@ -47,7 +47,7 @@ object graph {
 
 
 
-    def community_matrix[
+    def community_matrix [
         S, SourceID, DestID, 
         NodeID_Type, Community_Type
     ](
@@ -55,10 +55,10 @@ object graph {
         community_att: Witness
     )(
         implicit
-        get_source_id: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, NodeID_Type],
-        get_dest_id: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, NodeID_Type],
-        get_source_community: SelectAtt.Aux[dataset.Repr, Witness.`'source`.T :: community_att.T :: HNil, community_att.T, Community_Type],
-        get_dest_community: SelectAtt.Aux[dataset.Repr, Witness.`'dest`.T :: community_att.T :: HNil, community_att.T, Community_Type],
+        get_source_id: SelectField.Aux[dataset.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, NodeID_Type],
+        get_dest_id: SelectField.Aux[dataset.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, NodeID_Type],
+        get_source_community: SelectField.Aux[dataset.Repr, Witness.`'source`.T :: community_att.T :: HNil, community_att.T, Community_Type],
+        get_dest_community: SelectField.Aux[dataset.Repr, Witness.`'dest`.T :: community_att.T :: HNil, community_att.T, Community_Type],
     ): Map[NodeID_Type, Map[Community_Type, Boolean]] = {
         var m: Map[NodeID_Type, Map[Community_Type, Boolean]] = Map()
         dataset.data.foreach(hlist => {

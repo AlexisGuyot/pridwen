@@ -1,58 +1,55 @@
 package pridwen.models.aux 
 
 import shapeless.{HList, HNil, ::, Witness}
-import shapeless.ops.hlist.{Prepend}
-import shapeless.labelled.{FieldType => Field, field}
-
-import pridwen.support.{ToHList}
-import pridwen.support.functions.{getFieldValue}
-
-/* trait Transformation
-trait Add extends Transformation
-case object Add extends Add
-trait Update extends Transformation
-case object Update extends Update */
+import shapeless.labelled.{FieldType => Field}
 
 object transformations {
-    trait Add[P <: HList, AN, AT]
-    def Add[T]: AddBuilder[T] = new AddBuilder(true)
-    class AddBuilder[T](private val dummy: Boolean) extends AnyVal {
-        def apply[P <: HList](p: P, n: Witness): Add[P, n.T, T] = new Add[P, n.T, T] {}
+    trait Add[Path <: HList, Field_Name, Field_Type]
+    def Add[Field_Type]: AddBuilder[Field_Type] = new AddBuilder(true)
+    class AddBuilder[Field_Type](private val dummy: Boolean) extends AnyVal {
+        def apply[Path <: HList](path: Path, att_name: Witness): Add[Path, att_name.T, Field_Type] = new Add[Path, att_name.T, Field_Type] {}
     }
 
-    trait Update[P <: HList, AN, AT]
-    def Update[T]: UpdateBuilder[T] = new UpdateBuilder(true)
-    class UpdateBuilder[T](private val dummy: Boolean) extends AnyVal {
-        def apply[P <: HList](p: P, n: Witness): Update[P, n.T, T] = new Update[P, n.T, T] {}
+    trait Update[Path <: HList, New_Name, New_Type]
+    def Update[New_Type]: UpdateBuilder[New_Type] = new UpdateBuilder(true)
+    class UpdateBuilder[New_Type](private val dummy: Boolean) extends AnyVal {
+        def apply[Path <: HList](path: Path, new_name: Witness): Update[Path, new_name.T, New_Type] = new Update[Path, new_name.T, New_Type] {}
     }
 }
 
 import transformations._
 
 
-trait UpdateSchema[S <: HList, T] { type Out <: HList }
+trait UpdateSchema[Schema <: HList, Transformation] { type Out <: HList }
 object UpdateSchema {
-    def apply[S <: HList, T](implicit ok: UpdateSchema[S, T]): Aux[S, T, ok.Out] = ok
-    type Aux[S <: HList, T, Out0 <: HList] = UpdateSchema[S, T] { type Out = Out0 }
-    protected def inhabit_Type[S <: HList, T, Out0 <: HList]: Aux[S, T, Out0] = new UpdateSchema[S, T] { type Out = Out0 }
+    def apply[Schema <: HList, Transformation](implicit ok: UpdateSchema[Schema, Transformation]): Aux[Schema, Transformation, ok.Out] = ok
+    type Aux[Schema <: HList, Transformation, New_Schema <: HList] = UpdateSchema[Schema, Transformation] { type Out = New_Schema }
+    protected def inhabit_Type[Schema <: HList, Transformation, New_Schema <: HList]: Aux[Schema, Transformation, New_Schema] = new UpdateSchema[Schema, Transformation] { type Out = New_Schema }
 
-    implicit def add[S <: HList, P <: HList, AN, AT, Out0 <: HList]
-    (
+    implicit def transfo_is_add [
+        Schema <: HList, Path <: HList, Field_Name, Field_Type, 
+        New_Schema <: HList
+    ](
         implicit
-        a: AddAtt.Aux[S, P, AN, AT, Out0]
-    ) = inhabit_Type[S, Add[P, AN, AT], Out0]
+        add_field: AddField.Aux[Schema, Path, Field_Name, Field_Type, New_Schema]
+    ) = inhabit_Type[Schema, Add[Path, Field_Name, Field_Type], New_Schema]
 
-    implicit def update[S <: HList, P <: HList, AN, AT, Out0 <: HList](
+    implicit def transfo_is_update [
+        Schema <: HList, Path <: HList, Field_Name, Field_Type, 
+        New_Schema <: HList
+    ](
         implicit
-        a: ReplaceAtt.Aux[S, P, AN, AT, Out0]
-    ) = inhabit_Type[S, Update[P, AN, AT], Out0]
+        replace_field: ReplaceField.Aux[Schema, Path, Field_Name, Field_Type, New_Schema]
+    ) = inhabit_Type[Schema, Update[Path, Field_Name, Field_Type], New_Schema]
 
-    implicit def multiple_transfo[S <: HList, HT, TT <: HList, Out0 <: HList, Out1 <: HList]
-    (
+    implicit def multiple_transfo [
+        Schema <: HList, Transfo, OtherTransfo <: HList, 
+        New_Schema1 <: HList, New_Schema2 <: HList
+    ](
         implicit
-        u1: UpdateSchema.Aux[S, HT, Out0],
-        u2: UpdateSchema.Aux[Out0, TT, Out1]
-    ) = inhabit_Type[S, HT::TT, Out1]
+        u1: UpdateSchema.Aux[Schema, Transfo, New_Schema1],
+        u2: UpdateSchema.Aux[New_Schema1, OtherTransfo, New_Schema2]
+    ) = inhabit_Type[Schema, Transfo::OtherTransfo, New_Schema2]
 
-    implicit def no_transo[S <: HList] = inhabit_Type[S, HNil, S]
+    implicit def no_transfo[Schema <: HList] = inhabit_Type[Schema, HNil, Schema]
 }

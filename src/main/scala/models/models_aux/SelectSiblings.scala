@@ -4,25 +4,37 @@ import shapeless.{HList, HNil, ::}
 
 import pridwen.support.{ReducePath}
 
-trait SelectSiblings[S <: HList, P <: HList] { type Out <: HList ; def apply(s: S): Out }
+trait SelectSiblings[Schema <: HList, Path <: HList] { type Out <: HList ; def apply(schema: Schema): Out }
 object SelectSiblings {
-    def apply[S <: HList, P <: HList](implicit ok: SelectSiblings[S, P]): Aux[S, P, ok.Out] = ok
-    type Aux[S <: HList, P <: HList, Out0 <: HList] = SelectSiblings[S, P] { type Out = Out0 }
-    protected def inhabit_Type[S <: HList, P <: HList, Out0 <: HList](f: S => Out0): Aux[S, P, Out0] = new SelectSiblings[S, P] { type Out = Out0 ; def apply(s: S) = f(s) }
+    def apply[Schema <: HList, Path <: HList](implicit ok: SelectSiblings[Schema, Path]): Aux[Schema, Path, ok.Out] = ok
+    type Aux[Schema <: HList, Path <: HList, New_Schema <: HList] = SelectSiblings[Schema, Path] { type Out = New_Schema }
 
-    implicit def path_longer_than_1[S <: HList, P <: HList, A, RP <: HList, RPH, RPT <: HList, NP <: HList, N, NS <: HList]
+    protected def inhabit_Type[Schema <: HList, Path <: HList, New_Schema <: HList](
+        f: Schema => New_Schema
+    ): Aux[Schema, Path, New_Schema] 
+        = new SelectSiblings[Schema, Path] { 
+            type Out = New_Schema 
+            def apply(schema: Schema) = f(schema) 
+    }
+
+    implicit def schema_is_nested [
+        Schema <: HList, Path <: HList, 
+        ReducedPath <: HList, 
+        ParentName, ParentSchema <: HList]
     (
         implicit
-        r: ReducePath.Aux[P, NP],
-        sa: SelectAtt.Aux[S, NP, N, NS]
-    ) = inhabit_Type[S, P, NS](
-        (s: S) => sa(s)
+        reduce_path: ReducePath.Aux[Path, ReducedPath],
+        select_field: SelectField.Aux[Schema, ReducedPath, ParentName, ParentSchema]
+    ) = inhabit_Type[Schema, Path, ParentSchema](
+        (schema: Schema) => select_field(schema)
     )
 
-    implicit def path_of_1[S <: HList, A](
+    implicit def schema_is_not_nested [
+        Schema <: HList, F
+    ](
         implicit
-        s: SelectAtt[S, A::HNil]
-    ) = inhabit_Type[S, A::HNil, S](
-        (s: S) => s
+        select_field: SelectField[Schema, F::HNil]
+    ) = inhabit_Type[Schema, F::HNil, Schema](
+        (schema: Schema) => schema
     )
 }

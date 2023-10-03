@@ -2,7 +2,7 @@ package pridwen.operators.predefined
 
 import shapeless.{HList, HNil}
 
-import pridwen.models.aux.{ValidModel, UpdateSchema}
+import pridwen.models.aux.{IsValidSchema, UpdateSchema}
 import pridwen.models.{Model, Graph, ValidGraph}
 
 object transform {
@@ -16,7 +16,7 @@ object transform {
     )(
         implicit
         update_schema: UpdateSchema.Aux[dataset.Repr, Transformations, New_Schema],
-        res_model: ValidModel[dataset.type, New_Schema, HNil]
+        res_model: IsValidSchema[New_Schema, dataset.type, HNil]
     ): res_model.Out = res_model(f(dataset))
 
     def transform [

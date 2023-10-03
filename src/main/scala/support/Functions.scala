@@ -4,7 +4,7 @@ import shapeless.{HList, Witness}
 import shapeless.labelled.{FieldType, field}
 import shapeless.ops.record.{Selector => RSelector}
 
-import pridwen.models.aux.{SelectAtt}
+import pridwen.models.aux.{SelectField}
 
 object functions {
     def getFieldValue[K,V](f: FieldType[K,V]): V = f
