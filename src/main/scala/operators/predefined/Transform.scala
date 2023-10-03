@@ -1,12 +1,9 @@
 package pridwen.operators.predefined
 
-import shapeless.{HList, HNil, ::, Witness}
-import shapeless.labelled.{FieldType => Field, field}
-import shapeless.ops.hlist.{Prepend}
+import shapeless.{HList, HNil}
 
-import pridwen.models.aux.{ValidModel, AddAtt, SelectAtt, UpdateSchema}
+import pridwen.models.aux.{ValidModel, UpdateSchema}
 import pridwen.models.{Model, Graph, ValidGraph}
-import pridwen.support.{EquivHList}
 
 object transform {
     def transform [
