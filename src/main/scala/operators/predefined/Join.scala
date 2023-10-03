@@ -12,7 +12,7 @@ import pridwen.models.aux.{SelectAtt, SelectSiblings, ValidModel, ReplaceAtt}
 import pridwen.operators.aux.{CheckFName}
 
 object join {
-    // Idées d'améliorations : Utiliser pridwen.models.aux.UpdateSchema pour simplifier les implicites, Décider de s'il faut garder CheckFName ou non, Support graphes pour la fonction join.
+    // Idées d'améliorations : Utiliser pridwen.models.aux.UpdateSchema pour simplifier les implicites, Décider de s'il faut garder CheckFName ou non, Support graphes pour la fonction join, Support inner/left/right/full join instances.
 
     private def do_join[LeftSchema <: HList, RightSchema <: HList, LeftKey, RightKey, LeftKey_Type, OutSchema <: HList](
         left: List[LeftSchema],
