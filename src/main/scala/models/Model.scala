@@ -15,5 +15,5 @@ abstract class Model[S](dataset: List[S]) {
 object Model {
     def JSON(implicit j: ValidJSON[HNil]) = j(List(HNil))
     def Relation(implicit r: ValidRelation[HNil]) = r(List(HNil))
-    def Graph(implicit g: ValidGraph[(Field[W.`'id`.T, Int] :: HNil) :: (Field[W.`'id`.T, Int] :: HNil) :: HNil, W.`'id`.T, W.`'id`.T]) = g(List((field[W.`'id`.T](0)::HNil) :: (field[W.`'id`.T](0)::HNil) :: HNil))
+    def Graph(implicit g: IsValidGraph[(Field[W.`'id`.T, Int] :: HNil) :: (Field[W.`'id`.T, Int] :: HNil) :: HNil, W.`'id`.T, W.`'id`.T]) = g(List((field[W.`'id`.T](0)::HNil) :: (field[W.`'id`.T](0)::HNil) :: HNil))
 }

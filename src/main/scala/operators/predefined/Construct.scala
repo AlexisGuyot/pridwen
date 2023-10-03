@@ -25,8 +25,8 @@ object construct {
         get_source_id: SelectField.Aux[dataset.Repr, Path_To_Source_ID, SourceID_Name, NodeID_Type],
         get_dest_id: SelectField.Aux[dataset.Repr, Path_To_Dest_ID, DestID_Name, NodeID_Type],
         res_schema: Res_Schema =:= ((Field[SourceID_Name, NodeID_Type] :: HNil) :: (Field[DestID_Name, NodeID_Type] :: HNil) :: (Field[W.`'weight`.T, Int] :: HNil) :: HNil),
-        res_model: ValidGraph[Res_Schema, SourceID_Name, DestID_Name]
-    ): Graph.Aux[Res_Schema, SourceID_Name, DestID_Name, res_model.E, res_model.V] = {
+        res_model: IsValidGraph[Res_Schema, SourceID_Name, DestID_Name]
+    ): Graph.Aux[Res_Schema, SourceID_Name, DestID_Name, res_model.Repr] = {
         val d = dataset.data
                 .groupBy(schema => (get_source_id(schema) :: HNil, get_dest_id(schema) :: HNil))
                 .mapValues(_.size)
@@ -58,8 +58,8 @@ object construct {
         get_dest_att: SelectManyFields.Aux[dataset.Repr, Path_To_Dest_Att, Dest_Att],
         get_edge_att: SelectManyFields.Aux[dataset.Repr, Path_To_Edge_Att, Edge_Att],
         res_schema: Res_Schema =:= ((Field[SourceID_Name, NodeID_Type] :: Source_Att) :: (Field[DestID_Name, NodeID_Type] :: Dest_Att) :: (Field[W.`'weight`.T, Int] :: Edge_Att) :: HNil),
-        res_model: ValidGraph[Res_Schema, SourceID_Name, DestID_Name]
-    ): Graph.Aux[Res_Schema, SourceID_Name, DestID_Name, res_model.E, res_model.V] = {
+        res_model: IsValidGraph[Res_Schema, SourceID_Name, DestID_Name]
+    ): Graph.Aux[Res_Schema, SourceID_Name, DestID_Name, res_model.Repr] = {
         val d = dataset.data
                 .groupBy(schema => (get_source_id(schema) :: get_source_att(schema), get_dest_id(schema) :: get_dest_att(schema), get_edge_att(schema)))
                 .mapValues(_.size)

@@ -35,9 +35,9 @@ object IsValidSchema {
 
     implicit def target_model_is_graph [
         Schema, TargetModel <: Graph[_,_,_], SourceID, DestID, 
-        Edges <: HList, Vertices <: HList
+        Repr <: HList
     ](
         implicit
-        res_model: ValidGraph.Aux[Schema, SourceID, DestID, Edges, Vertices]
-    ) = inhabit_Type[Schema, TargetModel, (SourceID, DestID), Graph.Aux[Schema, SourceID, DestID, Edges, Vertices]]((dataset: List[Schema]) => res_model(dataset))
+        res_model: IsValidGraph.Aux[Schema, SourceID, DestID, Repr]
+    ) = inhabit_Type[Schema, TargetModel, (SourceID, DestID), Graph.Aux[Schema, SourceID, DestID, Repr]]((dataset: List[Schema]) => res_model(dataset))
 }

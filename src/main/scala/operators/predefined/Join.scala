@@ -118,8 +118,8 @@ object join {
         concat_siblings: UPrepend.Aux[Siblings_LeftKey, Siblings_RightKey, New_Schema],
         reduced_left_path: ReducePath.Aux[Path_To_Left_Key, Reduced_LPath],
         update_lschema: ReplaceField.Aux[ldataset.Repr, Reduced_LPath, HNil, New_Schema, New_LeftSchema],
-        res_model: ValidGraph[New_LeftSchema, newgraph_sourceID.T, newgraph_destID.T]
-    ): Graph.Aux[New_LeftSchema, newgraph_sourceID.T, newgraph_destID.T, res_model.E, res_model.V] = {
+        res_model: IsValidGraph[New_LeftSchema, newgraph_sourceID.T, newgraph_destID.T]
+    ): Graph.Aux[New_LeftSchema, newgraph_sourceID.T, newgraph_destID.T, res_model.Repr] = {
         val d = do_join(ldataset.data, rdataset.data, get_left_key.apply, get_right_key.apply, (lschema: ldataset.Repr, rschema: rdataset.Repr) =>
             update_lschema(lschema, concat_siblings(get_lk_siblings(lschema), get_rk_siblings(rschema)))
         )
@@ -188,8 +188,8 @@ object join {
         concat_siblings: UPrepend.Aux[Siblings_LeftKey, Siblings_RightKey, New_Schema],
         reduced_right_path: ReducePath.Aux[Path_To_Right_Key, Reduced_RPath],
         update_rschema: ReplaceField.Aux[rdataset.Repr, Reduced_RPath, HNil, New_Schema, New_RightSchema],
-        res_model: ValidGraph[New_RightSchema, newgraph_sourceID.T, newgraph_destID.T]
-    ): Graph.Aux[New_RightSchema, newgraph_sourceID.T, newgraph_destID.T, res_model.E, res_model.V] = {
+        res_model: IsValidGraph[New_RightSchema, newgraph_sourceID.T, newgraph_destID.T]
+    ): Graph.Aux[New_RightSchema, newgraph_sourceID.T, newgraph_destID.T, res_model.Repr] = {
         val d = do_join(ldataset.data, rdataset.data, get_left_key.apply, get_right_key.apply, (lschema: ldataset.Repr, rschema: rdataset.Repr) =>
             //update_rschema(rschema, concat_siblings(rename_lk(get_lk_siblings(lschema)), rename_rk(get_rk_siblings(rschema))))
             update_rschema(rschema, concat_siblings(get_lk_siblings(lschema), get_rk_siblings(rschema)))
