@@ -121,9 +121,7 @@ object Main extends App {
     val comm_matrix = community_matrix(joined_graph2, W('community))
     println(comm_matrix)
     
-    val workflow_output = joined_graph2
+    val workflow_output = adj_matrix
     show_dataset(workflow_output, "Workflow Output")
-    println("\nWorkflow output:")
-    println(workflow_output.data)
     println()
 }

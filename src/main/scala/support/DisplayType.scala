@@ -3,9 +3,10 @@ package pridwen.support
 import shapeless.{HList, HNil, ::, Typeable, Lazy, Witness}
 import shapeless.labelled.{FieldType}
 
-import scala.reflect.runtime.universe.{TypeTag, WeakTypeTag}
+import scala.reflect.runtime.universe.{TypeTag, WeakTypeTag, typeTag}
+import scala.reflect.{ClassTag, classTag}
 
-import pridwen.support.{UPrepend, ToHList}
+import pridwen.support.{UPrepend, ToHList, PrintType}
 import pridwen.models.{Model}
 import pridwen.models.aux.{PrintSchema}
 
@@ -35,10 +36,8 @@ object display {
     
     def show_model[S <: HList : TypeTag] = println(show[S])
 
-    def show_dataset[M <: Model[_], Repr0 <: HList](dataset: M, name: String = "Dataset")(
+    def show_dataset[M <: Model[_], Repr0 <: HList](dataset: M, name: String)(
         implicit
-        //to_list: ToHList.Aux[dataset.Repr, Repr0],
-        //tag: TypeTag[Repr0]
         schema: PrintSchema[dataset.Repr]
     ): Unit = {
         val m: String = dataset match {
@@ -47,10 +46,24 @@ object display {
             case g: pridwen.models.Graph[_,_,_] => "Graph"
             case _ => "Model"
         }
-        //val s: String = show(tag)
         println(s"============= ${name}")
         println(s"Model: ${m}")
         println(s"Schema: \n${schema()}")
+        println(s"Data: ${dataset.data}")
+        println("=======================================")
+    }
+    def show_dataset[T](dataset: T, name: String)
+    (
+        implicit
+        //tag: ClassTag[T]
+        //tag: WeakTypeTag[T]
+        print_dataset: PrintType[T]
+    ): Unit = {
+        //val tag = classTag[T]
+        println(s"============= ${name}")
+        //println(s"Type: ${tag.toString}")
+        println(s"Type: ${print_dataset.apply}")
+        println(s"Value: ${dataset}")
         println("=======================================")
     }
 
