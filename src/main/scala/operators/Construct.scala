@@ -1,4 +1,4 @@
-package pridwen.operators.predefined
+package pridwen.operators
 
 import collection.mutable.Map
 

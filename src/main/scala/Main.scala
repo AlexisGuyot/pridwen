@@ -8,10 +8,10 @@ object Main extends App {
     import pridwen.models.aux.transformations.{Add, Update}
     import pridwen.support.display._
     import pridwen.support.functions.{get}
-    import pridwen.operators.predefined.construct._
-    import pridwen.operators.predefined.join._
-    import pridwen.operators.predefined.transform._
-    import pridwen.operators.predefined.graph._
+    import pridwen.operators.construct._
+    import pridwen.operators.join._
+    import pridwen.operators.transform._
+    import pridwen.operators.graph._
     
     //type InputSchema1 = Field[W.`'user`.T, Field[W.`'id`.T, Long] :: HNil] :: Field[W.`'retweeted_status`.T, Field[W.`'user`.T, Field[W.`'id`.T, Long] :: HNil] :: HNil] :: HNil
 
