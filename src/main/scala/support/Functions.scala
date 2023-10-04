@@ -1,15 +1,15 @@
 package pridwen.support
 
 import shapeless.{HList, Witness}
-import shapeless.labelled.{FieldType, field}
+import shapeless.labelled.{FieldType => Field, field}
 import shapeless.ops.record.{Selector => RSelector}
 
-import pridwen.models.aux.{SelectField}
+
 
 object functions {
-    def getFieldValue[K,V](f: FieldType[K,V]): V = f
+    def getFieldValue[FName,FType](f: Field[FName,FType]): FType = f
 
-    def rename[OK, V](f: FieldType[OK, V], name: Witness): FieldType[name.T, V] = field[name.T](getFieldValue(f))
+    def rename[FName, FType](f: Field[FName,FType], new_name: Witness): Field[new_name.T,FType] = field[new_name.T](getFieldValue(f))
 
-    def get[H <: HList, V](h: H, n: Witness)(implicit get_n: RSelector[H, n.T]): get_n.Out = get_n(h)
+    def get[H <: HList, FType](hlist: H, fname: Witness)(implicit select_field: RSelector[H, fname.T]): select_field.Out = select_field(hlist)
 }

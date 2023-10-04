@@ -4,32 +4,42 @@ import shapeless.{HList, HNil, ::, Witness}
 import shapeless.labelled.{FieldType => Field}
 import shapeless.ops.record.{Selector}
 
-trait RSelector[L <: HList, P] { type K ; type V ; def apply(l: L): V }
-trait LowPriorityRSelector {
-    type Aux[L <: HList, P, K0, V0] = RSelector[L, P] { type K = K0 ; type V = V0 }
-    protected def inhabit_Type[L <: HList, P, K0, V0](f: L => V0): Aux[L, P, K0, V0] = new RSelector[L, P] { type K = K0 ; type V = V0 ; def apply(l: L) = f(l) }
 
-    implicit def p_is_field_name[L <: HList, K, V](
+
+trait RSelector[H <: HList, F] { type K ; type V ; def apply(hlist: H): V }
+trait LowPriorityRSelector {
+    type Aux[H <: HList, F, K0, V0] = RSelector[H, F] { type K = K0 ; type V = V0 }
+
+    protected def inhabit_Type[H <: HList, F, K0, V0](
+        f: H => V0
+    ): Aux[H, F, K0, V0] 
+        = new RSelector[H, F] { 
+            type K = K0 
+            type V = V0 
+            def apply(hlist: H) = f(hlist) 
+    }
+
+    implicit def f_is_a_field_name[H <: HList, FName, FType](
         implicit
-        s: Selector.Aux[L, K, V]
-    ) = inhabit_Type[L, K, K, V](
-        (l: L) => s(l)
+        select_field: Selector.Aux[H, FName, FType]
+    ) = inhabit_Type[H, FName, FName, FType](
+        (hlist: H) => select_field(hlist)
     )
 }
 object RSelector extends LowPriorityRSelector {
-    def apply[L <: HList, P](implicit ok: RSelector[L, P]): Aux[L, P, ok.K, ok.V] = ok
+    def apply[H <: HList, F](implicit ok: RSelector[H, F]): Aux[H, F, ok.K, ok.V] = ok
     
-    implicit def p_is_field[L <: HList, K, V](
+    implicit def f_is_a_field[H <: HList, FName, FType](
         implicit
-        s: Selector.Aux[L, K, V]
-    ) = inhabit_Type[L, Field[K,V], K, V](
-        (l: L) => s(l)
+        select_field: Selector.Aux[H, FName, FType]
+    ) = inhabit_Type[H, Field[FName,FType], FName, FType](
+        (hlist: H) => select_field(hlist)
     )
 
-    implicit def p_is_witness[L <: HList, K, W <: Witness, V](
+    implicit def f_is_a_singleton_containing_a_field_name[H <: HList, FName, FType](
         implicit
-        s: Selector.Aux[L, K, V],
-    ) = inhabit_Type[L, Witness.Aux[K], K, V](
-        (l: L) => s(l)
+        select_field: Selector.Aux[H, FName, FType],
+    ) = inhabit_Type[H, Witness.Aux[FName], FName, FType](
+        (hlist: H) => select_field(hlist)
     )
 }

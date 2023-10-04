@@ -6,7 +6,7 @@ import shapeless.ops.hlist.{Prepend}
 import shapeless.ops.record.{Renamer}
 
 import pridwen.support.functions.{getFieldValue}
-import pridwen.support.{ReducePath, UPrepend}
+import pridwen.support.{ReducePath, DConcat}
 import pridwen.models._
 import pridwen.models.aux.{SelectField, SelectSiblings, IsValidSchema, ReplaceField}
 import pridwen.operators.aux.{CheckFName}
@@ -115,7 +115,7 @@ object join {
         get_right_key: SelectField.Aux[rdataset.Repr, Path_To_Right_Key, RightKey, KeyType],
         get_lk_siblings: SelectSiblings.Aux[ldataset.Repr, Path_To_Left_Key, Siblings_LeftKey],
         get_rk_siblings: SelectSiblings.Aux[rdataset.Repr, Path_To_Right_Key, Siblings_RightKey],
-        concat_siblings: UPrepend.Aux[Siblings_LeftKey, Siblings_RightKey, New_Schema],
+        concat_siblings: DConcat.Aux[Siblings_LeftKey, Siblings_RightKey, New_Schema],
         reduced_left_path: ReducePath.Aux[Path_To_Left_Key, Reduced_LPath],
         update_lschema: ReplaceField.Aux[ldataset.Repr, Reduced_LPath, HNil, New_Schema, New_LeftSchema],
         res_model: IsValidGraph[New_LeftSchema, newgraph_sourceID.T, newgraph_destID.T]
@@ -185,7 +185,7 @@ object join {
         //rename_lk: Renamer.Aux[Siblings_LeftKey, LeftKey, LeftKey2, LeftSchema],
         //rename_rk: Renamer.Aux[Siblings_RightKey, RightKey, RightKey2, RightSchema],
         //concat_siblings: Prepend.Aux[LeftSchema, RightSchema, New_Schema],
-        concat_siblings: UPrepend.Aux[Siblings_LeftKey, Siblings_RightKey, New_Schema],
+        concat_siblings: DConcat.Aux[Siblings_LeftKey, Siblings_RightKey, New_Schema],
         reduced_right_path: ReducePath.Aux[Path_To_Right_Key, Reduced_RPath],
         update_rschema: ReplaceField.Aux[rdataset.Repr, Reduced_RPath, HNil, New_Schema, New_RightSchema],
         res_model: IsValidGraph[New_RightSchema, newgraph_sourceID.T, newgraph_destID.T]

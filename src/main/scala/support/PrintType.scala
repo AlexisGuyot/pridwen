@@ -1,13 +1,17 @@
 package pridwen.support
 
-import shapeless.ops.tuple.{IsComposite}
-
-import scala.reflect.runtime.universe.{TypeTag, WeakTypeTag}
+import scala.reflect.runtime.universe.{TypeTag}
 import scala.reflect.{ClassTag}
+
+
 
 trait PrintType[T] { def apply(): String }
 trait LowPriorityPrintType {
-    protected def inhabit_Type[T](tag: String): PrintType[T] = new PrintType[T] { def apply() = tag }
+    
+    protected def inhabit_Type[T](
+        tag: String
+    ): PrintType[T] 
+        = new PrintType[T] { def apply() = tag }
 
     implicit def default[T](implicit tag: ClassTag[T]) = inhabit_Type[T](s"${tag.toString}")
 }
