@@ -1,40 +1,58 @@
 package pridwen.models
 
-import shapeless.{HList, HNil, ::, Lazy}
-import shapeless.labelled.{FieldType}
+import shapeless.{HList, HNil, ::}
+import shapeless.labelled.{FieldType => Field}
 
 import java.time.{LocalDate => Date}
 
 import pridwen.support.{DeepGeneric}
 
-abstract class JSON[S](dataset: List[S]) extends Model[S](dataset)
+
+
+// ========================= Type definition
+
+abstract class JSON[Schema](dataset: List[Schema]) extends Model[Schema](dataset)
 object JSON { 
-    type Aux[S, Repr0 <: HList] = JSON[S] { type Repr = Repr0 }
-    def apply[S](dataset: List[S])(implicit ok: ValidJSON[S]) = ok(dataset)
+    type Aux[Schema, Repr0 <: HList] = JSON[Schema] { type Repr = Repr0 }
+    def apply[Schema](dataset: List[Schema])(implicit ok: IsValidJSON[Schema]) = ok(dataset)
 }
 
-trait ValidJSON[S] { type Out <: HList ; def apply(dataset: List[S]): JSON.Aux[S, Out] }
-object ValidJSON {
-    def apply[S](implicit ok: ValidJSON[S]): Aux[S, ok.Out] = ok
-    type Aux[S, Out0 <: HList] = ValidJSON[S] { type Out = Out0 }
-    protected def inhabit_Type[S, Repr0 <: HList](f: S => Repr0): Aux[S, Repr0] = new ValidJSON[S] { type Out = Repr0 ; def apply(dataset: List[S]) = new JSON[S](dataset) { type Repr = Repr0 ; def toRepr(s: S) = f(s) } }
 
-    implicit def case_class_schema[CCS <: Product, S <: HList](
+
+// ========================= To verify that a schema conforms to the JSON model
+
+trait IsValidJSON[Schema] { type Out <: HList ; def apply(dataset: List[Schema]): JSON.Aux[Schema, Out] }
+object IsValidJSON {
+    def apply[Schema](implicit ok: IsValidJSON[Schema]): Aux[Schema, ok.Out] = ok
+    type Aux[Schema, Out0 <: HList] = IsValidJSON[Schema] { type Out = Out0 }
+
+    protected def inhabit_Type[Schema, Repr0 <: HList](
+        f: Schema => Repr0
+    ): Aux[Schema, Repr0] 
+        = new IsValidJSON[Schema] { 
+            type Out = Repr0 
+            def apply(dataset: List[Schema]) = new JSON[Schema](dataset) { type Repr = Repr0 ; def toRepr(schema: Schema) = f(schema) } 
+    }
+
+    implicit def schema_as_case_class[CSchema <: Product, HSchema <: HList](
         implicit
-        gen: DeepGeneric.Aux[CCS, S],
-        j: ValidJSON[S]
-    ) = inhabit_Type[CCS, S](
-        (s: CCS) => gen.to(s)
+        convert: DeepGeneric.Aux[CSchema, HSchema],
+        json: IsValidJSON[HSchema]
+    ) = inhabit_Type[CSchema, HSchema](
+        (schema: CSchema) => convert.to(schema)
     )
 
-    implicit def empty_schema = inhabit_Type[HNil, HNil]((s: HNil) => HNil)
-    implicit def schema_with_multiple_attributes[K, V, T <: HList](
+    implicit def schema_has_at_least_one_field[FName, FType, OtherFields <: HList](
         implicit
-        r: JType[V],
-        i: ValidJSON[T]
-    ) = inhabit_Type[FieldType[K,V]::T, FieldType[K,V]::T](
-        (s: FieldType[K,V]::T) => s
+        valid_value_type: JType[FType],
+        json: IsValidJSON[OtherFields]
+    ) = inhabit_Type[Field[FName,FType]::OtherFields, Field[FName,FType]::OtherFields](
+        (schema: Field[FName,FType]::OtherFields) => schema
     )
+
+    implicit def schema_is_empty = inhabit_Type[HNil, HNil]((schema: HNil) => HNil)
+
+    // ========================= Valid value types for this model
 
     private trait JType[T]
     private object JType {
@@ -47,8 +65,7 @@ object ValidJSON {
         implicit def json_long = inhabit_JType[Long]
         implicit def json_bool = inhabit_JType[Boolean]
         implicit def json_date = inhabit_JType[Date]
-        //implicit def json_hlist = inhabit_JType[HList]
-        implicit def json_multi[T : JType] = inhabit_JType[List[T]]
-        implicit def json_nested[H <: HList : ValidJSON] = inhabit_JType[H]
+        implicit def json_multi[T : JType] = inhabit_JType[List[T]] // NB: homogeneous collection
+        implicit def json_nested[Schema <: HList : IsValidJSON] = inhabit_JType[Schema]
     }
 }

@@ -6,6 +6,8 @@ import shapeless.ops.hlist.{Replacer, Prepend}
 
 import pridwen.support.{RSelector}
 
+
+
 trait AddField[Schema <: HList, Path <: HList, Field_Name, Field_Type] { type Out <: HList ; def apply(schema: Schema, value: Field_Type): Out }
 object AddField {
     type Aux[Schema <: HList, Path <: HList, Field_Name, Field_Type, New_Schema <: HList] = AddField[Schema, Path, Field_Name, Field_Type] { type Out = New_Schema }

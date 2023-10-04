@@ -74,7 +74,7 @@ object construct {
         dataset: ModelIn[Schema]
     )(
         implicit
-        res_model: ValidRelation[dataset.Repr]
+        res_model: IsValidRelation[dataset.Repr]
     ): Relation.Aux[dataset.Repr, res_model.Out] = res_model(dataset.data)
 
     def constructRelation [
@@ -86,7 +86,7 @@ object construct {
     )(
         implicit
         get_relation_att: SelectManyFields.Aux[dataset.Repr, Path_To_Relation_Att, Relation_Att],
-        res_model: ValidRelation[Relation_Att]
+        res_model: IsValidRelation[Relation_Att]
     ): Relation.Aux[Relation_Att, res_model.Out] = {
         val d = dataset.data.map(schema => get_relation_att(schema))
         res_model(d)
@@ -99,7 +99,7 @@ object construct {
         dataset: ModelIn[Schema]
     )(
         implicit
-        res_model: ValidJSON[dataset.Repr]
+        res_model: IsValidJSON[dataset.Repr]
     ): JSON.Aux[dataset.Repr, res_model.Out] 
         = res_model(dataset.data)
 
@@ -112,7 +112,7 @@ object construct {
     )(
         implicit
         get_json_att: SelectManyFields.Aux[dataset.Repr, Path_To_JSON_Att, JSON_Att],
-        res_model: ValidJSON[JSON_Att]
+        res_model: IsValidJSON[JSON_Att]
     ): JSON.Aux[JSON_Att, res_model.Out] = {
         val d = dataset.data.map(schema => get_json_att(schema))
         res_model(d)

@@ -7,6 +7,8 @@ import pridwen.models.{Model}
 import pridwen.support.{RSelector}
 import pridwen.support.functions.{getFieldValue}
 
+
+
 trait As[FName, Path <: HList]
 object As {
     def apply[Path <: HList](field_name: Witness, path: Path) = new As[field_name.T, Path] {}

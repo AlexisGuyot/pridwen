@@ -5,15 +5,29 @@ import shapeless.labelled.{FieldType => Field, field}
 
 import pridwen.models.aux.{SelectField}
 
-abstract class Model[S](dataset: List[S]) { 
-    type Repr <: HList ; 
-    def toRepr(s: S): Repr ; 
-    val data: List[Repr] = dataset.map(s => toRepr(s))
 
-    def get[P, K, V](path: P, filter: Repr => Boolean = (_ => true))(implicit select: SelectField.Aux[Repr, P, K, V]): List[Field[K,V]] = { val d = scala.collection.mutable.ListBuffer.empty[Field[K,V]] ; data.foreach(repr => if(filter(repr)) select(repr) +=: d) ; d.to(List) }
+
+abstract class Model[Schema](dataset: List[Schema]) { 
+    type Repr <: HList 
+    def toRepr(schema: Schema): Repr 
+
+    val data: List[Repr] = dataset.map(schema => toRepr(schema))
+
+    def get[Path, FieldName, FieldType](
+        path: Path, 
+        filter: Repr => Boolean = (_ => true)
+    )(
+        implicit 
+        select_field: SelectField.Aux[Repr, Path, FieldName, FieldType]
+    ): List[Field[FieldName,FieldType]] = { 
+        val result = scala.collection.mutable.ListBuffer.empty[Field[FieldName,FieldType]] 
+        data.foreach(repr => if(filter(repr)) select_field(repr) +=: result)
+        result.to(List) 
+    }
 }
 object Model {
-    def JSON(implicit j: ValidJSON[HNil]) = j(List(HNil))
-    def Relation(implicit r: ValidRelation[HNil]) = r(List(HNil))
-    def Graph(implicit g: IsValidGraph[(Field[W.`'id`.T, Int] :: HNil) :: (Field[W.`'id`.T, Int] :: HNil) :: HNil, W.`'id`.T, W.`'id`.T]) = g(List((field[W.`'id`.T](0)::HNil) :: (field[W.`'id`.T](0)::HNil) :: HNil))
+    // Dummy model instances with empty schemas
+    def JSON(implicit json: IsValidJSON[HNil]) = json(List(HNil))
+    def Relation(implicit relation: IsValidRelation[HNil]) = relation(List(HNil))
+    def Graph(implicit graph: IsValidGraph[(Field[W.`'id`.T, Int] :: HNil) :: (Field[W.`'id`.T, Int] :: HNil) :: HNil, W.`'id`.T, W.`'id`.T]) = graph(List((field[W.`'id`.T](0)::HNil) :: (field[W.`'id`.T](0)::HNil) :: HNil))
 }

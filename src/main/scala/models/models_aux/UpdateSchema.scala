@@ -3,6 +3,8 @@ package pridwen.models.aux
 import shapeless.{HList, HNil, ::, Witness}
 import shapeless.labelled.{FieldType => Field}
 
+
+
 object transformations {
     trait Add[Path <: HList, Field_Name, Field_Type]
     def Add[Field_Type]: AddBuilder[Field_Type] = new AddBuilder(true)
@@ -16,8 +18,8 @@ object transformations {
         def apply[Path <: HList](path: Path, new_name: Witness): Update[Path, new_name.T, New_Type] = new Update[Path, new_name.T, New_Type] {}
     }
 }
-
 import transformations._
+
 
 
 trait UpdateSchema[Schema <: HList, Transformation] { type Out <: HList }

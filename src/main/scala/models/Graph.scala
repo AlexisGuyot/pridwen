@@ -8,11 +8,19 @@ import pridwen.support.{DeepGeneric, RSelector}
 import pridwen.support.functions.{getFieldValue, get}
 import pridwen.models.aux.{IsValidSchema}
 
+
+
+// ========================= Type definition
+
 abstract class Graph[Schema, SourceID, DestID](dataset: List[Schema]) extends Model[Schema](dataset)
 object Graph { 
     type Aux[Schema, SourceID, DestID, Repr0 <: HList] = Graph[Schema, SourceID, DestID] { type Repr = Repr0 }
     def apply[Schema, SourceID, DestID](dataset: List[Schema])(implicit ok: IsValidGraph[Schema, SourceID, DestID]) = ok(dataset)
 }
+
+
+
+// ========================= To verify that a schema conforms to the graph model
 
 trait IsValidGraph[Schema, SourceID, DestID] { type Repr <: HList ; def apply(dataset: List[Schema]): Graph.Aux[Schema, SourceID, DestID, Repr] }
 trait LowPriorityIsValidGraph {
@@ -44,8 +52,8 @@ object IsValidGraph extends LowPriorityIsValidGraph {
     def apply[Schema, SourceID, DestID](implicit ok: IsValidGraph[Schema, SourceID, DestID]): Aux[Schema, SourceID, DestID, ok.Repr] = ok
 
     implicit def schema_as_case_class [
-        CSchema <: Product, HSchema <: HList, SourceID, DestID, 
-        Repr0 <: HList
+        CSchema <: Product, SourceID, DestID, 
+        HSchema <: HList, Repr0 <: HList
     ](
         implicit
         convert: DeepGeneric.Aux[CSchema, HSchema],
@@ -54,69 +62,96 @@ object IsValidGraph extends LowPriorityIsValidGraph {
         (schema: CSchema) => graph(List(convert.to(schema))).data.head
     )
 
-    implicit def edge_list[SourceSchema <: HList, DestSchema <: HList, ES <: HList, SourceID, DestID, NS <: HList]
+    // (HS::TS) = SourceSchema ; (HD::TD) = DestSchema ; (HE::TE) = EdgeSchema
+    implicit def edge_list_with_edge_attributes[HS, TS <: HList, HD, TD <: HList, HE, TE <: HList, SourceID, DestID]
     (
         implicit
-        i1: ValidRelation[SourceSchema],
-        i2: ValidRelation[DestSchema],
-        i3: ValidRelation[ES],
-        s1: RSelector[SourceSchema, SourceID],
-        s2: RSelector[DestSchema, DestID],
-        p: Prepend.Aux[SourceSchema, DestSchema, NS]
+        //check_source_model: ValidRelation[SourceSchema],
+        //check_dest_model: ValidRelation[DestSchema],
+        //check_edge_model: ValidRelation[EdgeSchema],
+        get_sourceID: RSelector[(HS::TS), SourceID],
+        get_destID: RSelector[(HD::TD), DestID],
     ) = inhabit_Type[
-        SourceSchema :: DestSchema :: ES :: HNil, SourceID, DestID,
-        FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, ES] :: HNil
+        (HS::TS) :: (HD::TD) :: (HE::TE) :: HNil, SourceID, DestID,
+        FieldType[Witness.`'source`.T, (HS::TS)] :: FieldType[Witness.`'dest`.T, (HD::TD)] :: FieldType[Witness.`'edge`.T, (HE::TE)] :: HNil
     ](
-        (s: SourceSchema :: DestSchema :: ES :: HNil) => field[Witness.`'source`.T](s.head) :: field[Witness.`'dest`.T](s.tail.head) :: field[Witness.`'edge`.T](s.tail.tail.head) :: HNil
+        (schema: (HS::TS) :: (HD::TD) :: (HE::TE) :: HNil) => field[Witness.`'source`.T](schema.head) :: field[Witness.`'dest`.T](schema.tail.head) :: field[Witness.`'edge`.T](schema.tail.tail.head) :: HNil
     )
 
-    implicit def edge_list_with_nested_fields[SK, DK, EK, SourceSchema <: HList, DestSchema <: HList, ES <: HList, NS <: HList, SourceID, DestID, Repr0 <: HList](
-        implicit
-        //g: IsValidGraph.Aux[SourceSchema :: DestSchema :: ES :: HNil, SourceID, DestID, E0, V0]
-        i1: ValidRelation[SourceSchema],
-        i2: ValidRelation[DestSchema],
-        i3: ValidRelation[ES],
-        s1: RSelector[SourceSchema, SourceID],
-        s2: RSelector[DestSchema, DestID],
-        p: Prepend.Aux[SourceSchema, DestSchema, NS]
-    ) = inhabit_Type[
-        FieldType[SK, SourceSchema] :: FieldType[DK, DestSchema] :: FieldType[EK, ES] :: HNil, SourceID, DestID, 
-        FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, ES] :: HNil
+    implicit def edge_list_with_nested_fields[
+        SourceKey, DestKey, EdgeKey, 
+        SourceSchema <: HList, DestSchema <: HList, EdgeSchema <: HList, 
+        SourceID, DestID
     ](
-        (s: FieldType[SK, SourceSchema] :: FieldType[DK, DestSchema] :: FieldType[EK, ES] :: HNil) => field[Witness.`'source`.T](getFieldValue(s.head)) :: field[Witness.`'dest`.T](getFieldValue(s.tail.head)) :: field[Witness.`'edge`.T](getFieldValue(s.tail.tail.head)) :: HNil
+        implicit
+        //check_source_model: ValidRelation[SourceSchema],
+        //check_dest_model: ValidRelation[DestSchema],
+        //check_source_model: ValidRelation[EdgeSchema],
+        get_sourceID: RSelector[SourceSchema, SourceID],
+        get_destID: RSelector[DestSchema, DestID],
+    ) = inhabit_Type[
+        FieldType[SourceKey, SourceSchema] :: FieldType[DestKey, DestSchema] :: FieldType[EdgeKey, EdgeSchema] :: HNil, SourceID, DestID, 
+        FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, EdgeSchema] :: HNil
+    ](
+        (s: FieldType[SourceKey, SourceSchema] :: FieldType[DestKey, DestSchema] :: FieldType[EdgeKey, EdgeSchema] :: HNil) => field[Witness.`'source`.T](getFieldValue(s.head)) :: field[Witness.`'dest`.T](getFieldValue(s.tail.head)) :: field[Witness.`'edge`.T](getFieldValue(s.tail.tail.head)) :: HNil
     )
 }
 
-trait GetNodes[Repr <: HList, MN <: Model[_]] { type Out ; def apply(r: List[Repr]): Out }
-trait LowPriorityGetNodes {
-    type Aux[Repr <: HList, MN <: Model[_], Out0] = GetNodes[Repr, MN] { type Out = Out0 }
-    protected def inhabit_Type[Repr <: HList, MN <: Model[_], Out0](f: List[Repr] => Out0): Aux[Repr, MN, Out0] = new GetNodes[Repr, MN] { type Out = Out0 ; def apply(r: List[Repr]) = f(r) }
 
-    implicit def source_schema_and_dest_schema_are_different[SourceSchema <: HList, DestSchema <: HList, ES <: HList, MN <: Model[_]](
+
+// ========================= To infer the schema(s) of nodes from the edge list representation
+
+trait GetNodes[Repr <: HList, ModelOut <: Model[_]] { type Out ; def apply(dataset: List[Repr]): Out }
+trait LowPriorityGetNodes {
+    type Aux[Repr <: HList, ModelOut <: Model[_], Nodes_Schema] = GetNodes[Repr, ModelOut] { type Out = Nodes_Schema }
+
+    protected def inhabit_Type[Repr <: HList, ModelOut <: Model[_], Nodes_Schema](
+        f: List[Repr] => Nodes_Schema
+    ): Aux[Repr, ModelOut, Nodes_Schema] 
+    = new GetNodes[Repr, ModelOut] { 
+        type Out = Nodes_Schema 
+        def apply(r: List[Repr]) = f(r) 
+    }
+
+    implicit def source_schema_and_dest_schema_are_different [
+        SourceSchema <: HList, DestSchema <: HList, EdgeSchema <: HList, 
+        ModelOut <: Model[_]
+    ](
         implicit
-        m1: IsValidSchema[SourceSchema, MN, HNil],
-        m2: IsValidSchema[DestSchema, MN, HNil]
-    ) = inhabit_Type[FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, ES] :: HNil, MN, (m1.Out, m2.Out)](
-        (r: List[FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, ES] :: HNil]) => {
-            val d1 = scala.collection.mutable.ListBuffer.empty[SourceSchema]
-            val d2 = scala.collection.mutable.ListBuffer.empty[DestSchema]
-            r.foreach(hlist => { d1 += get(hlist, Witness('source)) ; d2 += get(hlist, Witness('dest)) })
-            (m1(d1.distinct.to(List)), m2(d2.distinct.to(List)))
+        source_model: IsValidSchema[SourceSchema, ModelOut, HNil],
+        dest_model: IsValidSchema[DestSchema, ModelOut, HNil]
+    ) = inhabit_Type[
+        FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, EdgeSchema] :: HNil, 
+        ModelOut, 
+        (source_model.Out, dest_model.Out)
+    ](
+        (dataset: List[FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, EdgeSchema] :: HNil]) => {
+            val sources = scala.collection.mutable.ListBuffer.empty[SourceSchema]
+            val destinations = scala.collection.mutable.ListBuffer.empty[DestSchema]
+            dataset.foreach(hlist => { sources += get(hlist, Witness('source)) ; destinations += get(hlist, Witness('dest)) })
+            (source_model(sources.distinct.to(List)), dest_model(destinations.distinct.to(List)))
         }
     )
 }
 object GetNodes extends LowPriorityGetNodes {
-    def apply[Repr <: HList, MN <: Model[_]](implicit ok: GetNodes[Repr, MN]): Aux[Repr, MN, ok.Out] = ok
+    def apply[Repr <: HList, ModelOut <: Model[_]](implicit ok: GetNodes[Repr, ModelOut]): Aux[Repr, ModelOut, ok.Out] = ok
 
-    implicit def source_schema_and_dest_schema_are_same[SourceSchema <: HList, DestSchema <: HList, ES <: HList, MN <: Model[_]](
+    implicit def source_schema_and_dest_schema_are_same [
+        SourceSchema <: HList, DestSchema <: HList, EdgeSchema <: HList, 
+        ModelOut <: Model[_]
+    ](
         implicit
-        eq: SourceSchema =:= DestSchema,
-        m: IsValidSchema[DestSchema, MN, HNil]
-    ) = inhabit_Type[FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, ES] :: HNil, MN, m.Out](
-        (r: List[FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, ES] :: HNil]) => { 
-            val d = scala.collection.mutable.ListBuffer.empty[DestSchema]
-            r.foreach(hlist => d ++= List(eq(get(hlist, Witness('source))), get(hlist, Witness('dest))))
-            m(d.distinct.to(List))
+        convert_to_dest: SourceSchema =:= DestSchema,
+        nodes_model: IsValidSchema[DestSchema, ModelOut, HNil]
+    ) = inhabit_Type[
+        FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, EdgeSchema] :: HNil, 
+        ModelOut, 
+        nodes_model.Out
+    ](
+        (dataset: List[FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, EdgeSchema] :: HNil]) => { 
+            val nodes = scala.collection.mutable.ListBuffer.empty[DestSchema]
+            dataset.foreach(hlist => nodes ++= List(convert_to_dest(get(hlist, Witness('source))), get(hlist, Witness('dest))))
+            nodes_model(nodes.distinct.to(List))
         }
     )
 }

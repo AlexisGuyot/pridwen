@@ -3,6 +3,8 @@ package pridwen.models.aux
 import shapeless.{HList, ::, HNil}
 import shapeless.labelled.{FieldType => Field}
 
+
+
 trait SelectManyFields[Schema <: HList, Paths_To_Fields <: HList] { type Out <: HList ; def apply(schema: Schema): Out }
 object SelectManyFields {
     type Aux[Schema <: HList, Paths_To_Fields <: HList, New_Schema <: HList] = SelectManyFields[Schema, Paths_To_Fields] { type Out = New_Schema }
