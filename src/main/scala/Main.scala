@@ -73,11 +73,20 @@ object Main extends App {
     show_dataset(graph_rt, "Graph of Retweets")
 
     // Step 2: Détection des communautés dans le graphe des retweets
-    val graph_rt_with_communities = transform(
+    /* val graph_rt_with_communities = transform(
         graph_rt,
         Add[String](W('source) :: HNil, W('community)) ::
         Add[String](W('dest) :: HNil, W('community)) :: HNil
     )(
+        (dataset: graph_rt.type) => {
+            dataset.data.map(hlist => {
+                val source = get(hlist, W('source))
+                val dest = get(hlist, W('dest))
+                field[W.`'source`.T](source :+ field[W.`'community`.T](get_community(get(source, W('id))))) :: field[W.`'dest`.T](dest :+ field[W.`'community`.T](get_community(get(dest, W('id))))) :: field[W.`'edge`.T](get(hlist, W('edge))) :: HNil
+            })
+        }
+    ) */
+    val graph_rt_with_communities = transform(graph_rt)(
         (dataset: graph_rt.type) => {
             dataset.data.map(hlist => {
                 val source = get(hlist, W('source))
