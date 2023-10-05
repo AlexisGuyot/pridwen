@@ -11,7 +11,6 @@ object Main extends App {
     import pridwen.operators.construct._
     import pridwen.operators.join._
     import pridwen.operators.transform._
-    import pridwen.operators.graph._
     
     //type InputSchema1 = Field[W.`'user`.T, Field[W.`'id`.T, Long] :: HNil] :: Field[W.`'retweeted_status`.T, Field[W.`'user`.T, Field[W.`'id`.T, Long] :: HNil] :: HNil] :: HNil
 
@@ -38,7 +37,10 @@ object Main extends App {
     val dataset_tweets_quotes = List(
         TweetsQuotes(User(1268486802949767200L, "A"), QuotedStatus(User(277430850L, "B"))),
         TweetsQuotes(User(277430850L, "B"), QuotedStatus(User(1268486802949767200L, "A"))),
-        TweetsQuotes(User(1268486302459767200L, "C"), QuotedStatus(User(1268486802949767200L, "A"))),        
+        TweetsQuotes(User(1268486302459767200L, "C"), QuotedStatus(User(1268486802949767200L, "A"))),    
+        TweetsQuotes(User(2, "D"), QuotedStatus(User(1268486802949767200L, "A"))), 
+        TweetsQuotes(User(2, "D"), QuotedStatus(User(3, "E"))),         
+        TweetsQuotes(User(2, "D"), QuotedStatus(User(3, "E"))),       
     )
 
     val input_dataset1 = JSON[TweetsRT](dataset_tweets_rt)
@@ -88,7 +90,7 @@ object Main extends App {
     show_dataset(graph_rt_with_communities, "Graph of Retweets (with communities)")
 
     // Step 3: Récupération des sommets du graphe des retweets
-    val graph_rt_nodes = nodes(graph_rt_with_communities, Model.Relation)
+    val graph_rt_nodes = graph_rt_with_communities.nodes[Model.Relation]
 
     show_dataset(graph_rt_nodes, "Graph of Retweets Nodes")
 
@@ -106,25 +108,23 @@ object Main extends App {
     val joined_graph = join_in_right(
         graph_rt_nodes, graph_quotes,
         W('id) :: HNil,
-        W('source) :: W('id) :: HNil,
-        W('id), W('id)
+        W('source) :: W('id) :: HNil
     )
     val joined_graph2 = join_in_right(
         graph_rt_nodes, joined_graph,
         W('id) :: HNil,
-        W('dest) :: W('id) :: HNil,
-        W('id), W('id)
+        W('dest) :: W('id) :: HNil
     )
 
     show_dataset(joined_graph2, "Joined Graph (Quote-RT)")
 
     // Step 6: Construction de la matrice d'adjacence du graphe joint (matrice carrée d'entiers (poids) indicée par les ID des sommets)
-    val adj_matrix = adjacency_matrix(joined_graph2, W('weight))
+    val adj_matrix = joined_graph2.adjacency_matrix(W('weight))
 
     show_dataset_nomodel(adj_matrix, "Adjacency Matrix")
 
     // Step 7: Construction de la matrice des communautés du graphe joint (matrice de booléens indicée par les ID des sommets et par les valeurs distinctes des communautés)
-    val comm_matrix = community_matrix(joined_graph2, W('community))
+    val comm_matrix = joined_graph2.community_matrix(W('community))
 
     show_dataset_nomodel(comm_matrix, "Community Matrix")
 

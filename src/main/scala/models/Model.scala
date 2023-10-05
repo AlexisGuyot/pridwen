@@ -1,6 +1,6 @@
 package pridwen.models
 
-import shapeless.{HList, HNil, ::, Witness => W}
+import shapeless.{HList, HNil, ::, Witness}
 import shapeless.labelled.{FieldType => Field, field}
 
 import pridwen.models.aux.{SelectField}
@@ -26,8 +26,12 @@ abstract class Model[Schema](dataset: List[Schema]) {
     }
 }
 object Model {
+    type JSON = pridwen.models.JSON[HNil]
+    type Relation = pridwen.models.Relation[HNil]
+    type Graph[SourceID, DestID] = pridwen.models.Graph[HNil, SourceID, DestID]
+
     // Dummy model instances with empty schemas
     def JSON(implicit json: IsValidJSON[HNil]) = json(List(HNil))
     def Relation(implicit relation: IsValidRelation[HNil]) = relation(List(HNil))
-    def Graph(implicit graph: IsValidGraph[(Field[W.`'id`.T, Int] :: HNil) :: (Field[W.`'id`.T, Int] :: HNil) :: HNil, W.`'id`.T, W.`'id`.T]) = graph(List((field[W.`'id`.T](0)::HNil) :: (field[W.`'id`.T](0)::HNil) :: HNil))
+    def Graph(source_id: Witness, dest_id: Witness)(implicit graph: IsValidGraph[(Field[source_id.T, Int] :: HNil) :: (Field[dest_id.T, Int] :: HNil) :: HNil, source_id.T, dest_id.T]) = graph(List((field[source_id.T](0)::HNil) :: (field[dest_id.T](0)::HNil) :: HNil))
 }

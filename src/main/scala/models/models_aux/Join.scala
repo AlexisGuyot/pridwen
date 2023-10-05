@@ -6,7 +6,13 @@ import pridwen.support.{ReducePath, DConcat}
 import pridwen.support.functions.{getFieldValue}
 
 trait And[Paths <: HList]
+object And {
+    def apply[Paths <: HList](p: Paths): And[Paths] = new And[Paths] {}
+}
 trait Or[Paths <: HList]
+object Or {
+    def apply[Paths <: HList](p: Paths): Or[Paths] = new Or[Paths] {}
+}
 
 object joinMode {
     trait JoinMode
@@ -58,12 +64,12 @@ trait LowPriorityHandleAndOr {
 
     //================== Right
 
-    implicit def right_path_is_and [
-        LS <: HList, RS <: HList, LP, RP <: HList, RT <: HList, M <: JoinMode, Out0 <: HList
+    /* implicit def right_path_is_and [
+        LS <: HList, RS <: HList, LP, RP <: HList, RT <: HList, M <: JoinMode, Out0 <: HList, Out1 <: HList
     ](
         implicit
         check_other_side: HandleAndOr.Aux[LS, RS, LP, RP, M, Out0],
-        recurse_rp: HandleAndOr.Aux[LS, RS, LP, And[RT], M, Out0]
+        recurse_rp: HandleAndOr.Aux[LS, RS, LP, And[RT], M, Out1]
     ) = inhabit_Type[LS, RS, LP, And[RP::RT], M, Out0](
         (lschema: LS, rschema: RS) => check_other_side.condition(lschema, rschema) && recurse_rp.condition(lschema, rschema),
         check_other_side.do_join
@@ -77,14 +83,15 @@ trait LowPriorityHandleAndOr {
     ) = inhabit_Type[LS, RS, LP, And[RP::HNil], M, Out0](check_other_side.condition, check_other_side.do_join)
 
     implicit def right_path_is_or [
-        LS <: HList, RS <: HList, LP, RP <: HList, RT <: HList, M <: JoinMode, Out0 <: HList
+        LS <: HList, RS <: HList, LP, RP <: HList, RT <: HList, M <: JoinMode, Out0 <: HList, Out1 <: HList, Out2 <: HList
     ](
         implicit
         check_other_side: HandleAndOr.Aux[LS, RS, LP, RP, M, Out0],
-        recurse_rp: HandleAndOr.Aux[LS, RS, LP, Or[RT], M, Out0]
-    ) = inhabit_Type[LS, RS, LP, Or[RP::RT], M, Out0](
+        recurse_rp: HandleAndOr.Aux[LS, RS, LP, Or[RT], M, Out1],
+        concat: DConcat.Aux[Out0, Out1, Out2]
+    ) = inhabit_Type[LS, RS, LP, Or[RP::RT], M, Out2](
         (lschema: LS, rschema: RS) => check_other_side.condition(lschema, rschema) || recurse_rp.condition(lschema, rschema),
-        check_other_side.do_join
+        (lschema: LS, rschema: RS) => concat(check_other_side.do_join(lschema, rschema), recurse_rp.do_join(lschema, rschema))
     )
 
     implicit def right_path_is_or_eor [
@@ -92,7 +99,7 @@ trait LowPriorityHandleAndOr {
     ](
         implicit
         check_other_side: HandleAndOr.Aux[LS, RS, LP, RP, M, Out0]
-    ) = inhabit_Type[LS, RS, LP, Or[RP::HNil], M, Out0](check_other_side.condition, check_other_side.do_join)
+    ) = inhabit_Type[LS, RS, LP, Or[RP::HNil], M, Out0](check_other_side.condition, check_other_side.do_join) */
 }
 object HandleAndOr extends LowPriorityHandleAndOr {
     def apply[LS <: HList, RS <: HList, LP, RP, M <: JoinMode](implicit ok: HandleAndOr[LS, RS, LP, RP, M]): Aux[LS, RS, LP, RP, M, ok.Out] = ok
@@ -108,12 +115,12 @@ object HandleAndOr extends LowPriorityHandleAndOr {
 
     //================== Left
 
-    implicit def left_path_is_and [
-        LS <: HList, RS <: HList, LP <: HList, LT <: HList, RP, M <: JoinMode, Out0 <: HList
+    /* implicit def left_path_is_and [
+        LS <: HList, RS <: HList, LP <: HList, LT <: HList, RP, M <: JoinMode, Out0 <: HList, Out1 <: HList
     ](
         implicit
         check_other_side: HandleAndOr.Aux[LS, RS, LP, RP, M, Out0],
-        recurse_lp: HandleAndOr.Aux[LS, RS, And[LT], RP, M, Out0]
+        recurse_lp: HandleAndOr.Aux[LS, RS, And[LT], RP, M, Out1]
     ) = inhabit_Type[LS, RS, And[LP::LT], RP, M, Out0](
         (lschema: LS, rschema: RS) => check_other_side.condition(lschema, rschema) && recurse_lp.condition(lschema, rschema),
         check_other_side.do_join
@@ -127,11 +134,11 @@ object HandleAndOr extends LowPriorityHandleAndOr {
     ) = inhabit_Type[LS, RS, And[LP::HNil], RP, M, Out0](check_other_side.condition, check_other_side.do_join)
 
     implicit def left_path_is_or [
-        LS <: HList, RS <: HList, LP <: HList, LT <: HList, RP, M <: JoinMode, Out0 <: HList
+        LS <: HList, RS <: HList, LP <: HList, LT <: HList, RP, M <: JoinMode, Out0 <: HList, Out1 <: HList
     ](
         implicit
         check_other_side: HandleAndOr.Aux[LS, RS, LP, RP, M, Out0],
-        recurse_lp: HandleAndOr.Aux[LS, RS, Or[LT], RP, M, Out0]
+        recurse_lp: HandleAndOr.Aux[LS, RS, Or[LT], RP, M, Out1]
     ) = inhabit_Type[LS, RS, Or[LP::LT], RP, M, Out0](
         (lschema: LS, rschema: RS) => check_other_side.condition(lschema, rschema) || recurse_lp.condition(lschema, rschema),
         check_other_side.do_join
@@ -142,7 +149,7 @@ object HandleAndOr extends LowPriorityHandleAndOr {
     ](
         implicit
         check_other_side: HandleAndOr.Aux[LS, RS, LP, RP, M, Out0]
-    ) = inhabit_Type[LS, RS, Or[LP::HNil], RP, M, Out0](check_other_side.condition, check_other_side.do_join)
+    ) = inhabit_Type[LS, RS, Or[LP::HNil], RP, M, Out0](check_other_side.condition, check_other_side.do_join) */
 }
 
 trait HandleJoinMode[LS <: HList, RS <: HList, LP <: HList, RP <: HList, M <: JoinMode] { type Out <: HList ; def condition(lschema: LS, rschema: RS): Boolean ; def do_join(lschema: LS, rschema: RS): Out }
