@@ -37,10 +37,12 @@ abstract class Graph[Schema, SourceID, DestID](dataset: List[Schema]) extends Mo
         data.foreach(hlist => {
             val source_id = getFieldValue(get_source_id(hlist))
             val dest_id = getFieldValue(get_dest_id(hlist))
-            var nested_map = sparse_matrix.getOrElse(source_id, Map())
-            var current_weight = nested_map.getOrElse(dest_id, 0)
-            nested_map(dest_id) = current_weight + getFieldValue(get_edge_weight(hlist))
-            sparse_matrix(source_id) = nested_map
+            var source_map = sparse_matrix.getOrElse(source_id, Map())
+            //var dest_map = sparse_matrix.getOrElse(dest_id, Map())
+            var current_weight = source_map.getOrElse(dest_id, 0)
+            source_map(dest_id) = current_weight + getFieldValue(get_edge_weight(hlist))
+            sparse_matrix(source_id) = source_map
+            //sparse_matrix(dest_id) = dest_map
         })
         sparse_matrix
     }

@@ -1,20 +1,15 @@
-package pridwen
+import shapeless.{HList, ::, HNil, Witness => W}
+import shapeless.labelled.{FieldType => Field, field}
+import pridwen.models._
+import pridwen.models.aux.{As}
+import pridwen.models.aux.transformations.{Add, Update}
+import pridwen.support.display._
+import pridwen.support.functions.{get}
+import pridwen.operators.construct._
+import pridwen.operators.join._
+import pridwen.operators.transform._
 
 object Main extends App {  
-    import shapeless.{HList, ::, HNil, Witness => W}
-    import shapeless.labelled.{FieldType => Field, field}
-    import pridwen.models._
-    import pridwen.models.aux.{As}
-    import pridwen.models.aux.transformations.{Add, Update}
-    import pridwen.support.display._
-    import pridwen.support.functions.{get}
-    import pridwen.operators.construct._
-    import pridwen.operators.join._
-    import pridwen.operators.transform._
-    
-    //type InputSchema1 = Field[W.`'user`.T, Field[W.`'id`.T, Long] :: HNil] :: Field[W.`'retweeted_status`.T, Field[W.`'user`.T, Field[W.`'id`.T, Long] :: HNil] :: HNil] :: HNil
-
-
     // =============== Déclaration schéma(s) d'entrée
 
     case class User(id: Long, name: String)
@@ -36,6 +31,7 @@ object Main extends App {
     )
     val dataset_tweets_quotes = List(
         TweetsQuotes(User(1268486802949767200L, "A"), QuotedStatus(User(277430850L, "B"))),
+        TweetsQuotes(User(1268486802949767200L, "A"), QuotedStatus(User(1268486302459767200L, "C"))),
         TweetsQuotes(User(277430850L, "B"), QuotedStatus(User(1268486802949767200L, "A"))),
         TweetsQuotes(User(1268486302459767200L, "C"), QuotedStatus(User(1268486802949767200L, "A"))),    
         TweetsQuotes(User(2, "D"), QuotedStatus(User(1268486802949767200L, "A"))), 
@@ -145,6 +141,8 @@ object Main extends App {
     show_dataset_nomodel(workflow_output, "Workflow Output")
     println()
 
+    import polarisation._
+    val test_polarisation = polarisation(adj_matrix, comm_matrix)
 
 
     // Idée d'amélioration : utiliser des DataSet en interne des différents types pour meilleure gestion des gros volumes de données.

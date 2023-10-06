@@ -32,5 +32,14 @@ libraryDependencies ++= Seq(
   "eu.timepit" %% "refined-shapeless"       % "0.11.0"  // optional
 )
 
+// Breeze
+libraryDependencies  ++= Seq(
+  "org.scalanlp" %% "breeze" % "1.1",
+  "org.scalanlp" %% "breeze-natives" % "1.1",
+  "org.scalanlp" %% "breeze-viz" % "1.1"
+)
+
+scalaVersion := "2.13.3"
+
 libraryDependencies += "org.apache.spark" %% "spark-core" % "3.4.0"
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "3.4.0"
