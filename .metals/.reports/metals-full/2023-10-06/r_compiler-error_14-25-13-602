@@ -1,3 +1,10 @@
+java.lang.IndexOutOfBoundsException: 0
+occurred in the presentation compiler.
+
+action parameters:
+offset: 757
+uri: file:///C:/Users/Alexis.DESKTOP-K9CA12K/Documents/Recherche/Code/pridwen/src/main/scala/Polarisation.scala
+text:
 import scala.collection.mutable.Map
 import breeze.linalg._
 
@@ -19,13 +26,9 @@ object polarisation {
         val I = new DenseMatrix(Md.rows, Md.cols, Md.data.map((x: Int) => if(x == 0) 1 else 0))
         val NI = new DenseMatrix(Md.rows, Md.cols, Md.data.map((x: Int) => if(x == 0) 0 else 1))
 
-        for(i <- 0 to (Mc.cols-1)) {
-            val Mci = tile(Mc(::,i), 1, Mc.cols)
-            val Ii = (I *:* NMc) *:* Mci
-            val Mdsi = (Ma * Ii) *:* Mci *:* NI
-            val mMdsi = new DenseMatrix(Mdsi.rows, Mdsi.cols, Mdsi.data.map((x: Int) => if(x == 0) 1 else 0))
-            //Mvani[[i]] = (Mdsi[[i]]/(Mdsi[[i]] + Md)) - 0.5; Mvani[[i]] = Mvani[[i]] * (Mdsi[[i]] > 0); Mvani[[i]][is.na(Mvani[[i]])] = 0
-            //var Mvani = new DenseMatrix(Mdsi.rows, Mdsi.cols, (Mdsi + Md).data.foldLeft(0)((acc: Int, x: Int) => Mdsi.data(0)))
+        for(i <- 0 to (@@Mc.cols) {
+            val Ii = (I *:* NMc) //*:* Mc(::,i)
+            println(s"${(Ii.rows, Ii.cols)}")
         }
     }
 
@@ -78,3 +81,16 @@ object polarisation {
         DenseMatrix(values:_*)
     }
 }
+
+
+error stacktrace:
+scala.collection.LinearSeqOps.apply(LinearSeq.scala:131)
+	scala.collection.LinearSeqOps.apply$(LinearSeq.scala:128)
+	scala.collection.immutable.List.apply(List.scala:79)
+	dotty.tools.dotc.util.Signatures$.countParams(Signatures.scala:501)
+	dotty.tools.dotc.util.Signatures$.applyCallInfo(Signatures.scala:186)
+	dotty.tools.dotc.util.Signatures$.computeSignatureHelp(Signatures.scala:94)
+	dotty.tools.dotc.util.Signatures$.signatureHelp(Signatures.scala:63)
+	scala.meta.internal.pc.MetalsSignatures$.signatures(MetalsSignatures.scala:17)
+	scala.meta.internal.pc.SignatureHelpProvider$.signatureHelp(SignatureHelpProvider.scala:51)
+	scala.meta.internal.pc.ScalaPresentationCompiler.signatureHelp$$anonfun$1(ScalaPresentationCompiler.scala:371)
