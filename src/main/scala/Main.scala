@@ -142,8 +142,12 @@ object Main extends App {
     println()
 
     import polarisation._
-    val test_polarisation = polarisation(adj_matrix, comm_matrix)
-
+    import scala.collection.mutable.Map
+    val adj: Map[Int, Map[Int, Int]] = Map(1 -> Map(2 -> 3, 3 -> 2, 4 -> 4, 6 -> 5), 2 -> Map(3 -> 1, 6 -> 6), 3 -> Map(2 -> 5), 4 -> Map(1 -> 1, 5 -> 5, 6 -> 4), 6 -> Map(7 -> 5))
+    val comm: Map[Int, Map[String, Boolean]] = Map(1 -> Map("C1" -> true), 2 -> Map("C1" -> true), 3 -> Map("C1" -> true), 4 -> Map("C2" -> true), 5 -> Map("C2" -> true), 6 -> Map("C2" -> true, "C3" -> true), 7 -> Map("C3" -> true))
+    val (polarisation_matrix, porosity_matrix) = polarisation(adj, comm)
+    println(polarisation_matrix)
+    println(porosity_matrix)
 
     // Idée d'amélioration : utiliser des DataSet en interne des différents types pour meilleure gestion des gros volumes de données.
 }

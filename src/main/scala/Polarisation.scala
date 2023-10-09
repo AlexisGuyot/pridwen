@@ -19,32 +19,28 @@ object polarisation {
         val I = new DenseMatrix(Md.rows, Md.cols, Md.data.map((x: Int) => if(x == 0) 1 else 0))
         val NI = new DenseMatrix(Md.rows, Md.cols, Md.data.map((x: Int) => if(x == 0) 0 else 1))
 
+        var Mani = new Array[DenseMatrix[Double]](Mc.cols)
+        var Mpi = new Array[DenseMatrix[Double]](Mc.cols)
         for(i <- 0 to (Mc.cols-1)) {
             val Mci = tile(Mc(::,i), 1, Mc.cols)
             val Ii = (I *:* NMc) *:* Mci
             val Mdsi = (Ma * Ii) *:* Mci *:* NI
-            val mMdsi = new DenseMatrix(Mdsi.rows, Mdsi.cols, Mdsi.data.map((x: Int) => if(x == 0) 1 else 0))
-            //Mvani[[i]] = (Mdsi[[i]]/(Mdsi[[i]] + Md)) - 0.5; Mvani[[i]] = Mvani[[i]] * (Mdsi[[i]] > 0); Mvani[[i]][is.na(Mvani[[i]])] = 0
-            //var Mvani = new DenseMatrix(Mdsi.rows, Mdsi.cols, (Mdsi + Md).data.foldLeft(0)((acc: Int, x: Int) => Mdsi.data(0)))
+            val mMdsi = new DenseMatrix(Mdsi.rows, Mdsi.cols, Mdsi.data.map((x: Int) => if(x != 0) 1.0 else 0))
+            val Mvani = DenseMatrix.tabulate(Mdsi.rows, Mdsi.cols){ case (r, c) => if(Mdsi(r, c) != 0) if(Mdsi(r, c) + Md(r, c) != 0) (Mdsi(r, c).asInstanceOf[Double] / (Mdsi(r, c) + Md(r, c))) - 0.5 else 0 else 0 }
+            val McTi = McT(i,::).inner.map(v => v.asInstanceOf[Double]).toDenseMatrix
+            val Mbsi = tile(sum(mMdsi, Axis._0), McTi.rows, Mvani.cols)
+            val Mani1 = McTi * Mvani
+            val Mani2 = McTi * mMdsi
+            Mani(i) = DenseMatrix.tabulate(Mani1.rows, Mani1.cols){ case (r, c) => if(Mani2(r, c) != 0) Mani1(r,c)/Mani2(r,c) else 0 }
+            val Mpi1 = McTi * (new DenseMatrix(Mvani.rows, Mvani.cols, Mvani.data.map((x: Double) => if(x < 0) 1.0 else 0)))
+            Mpi(i) = DenseMatrix.tabulate(Mpi1.rows, Mpi1.cols){ case(r, c) => Mpi1(r, c) / (if(Mbsi(r, c) != 0) Mbsi(r, c) else 1) * 100 }
         }
+
+        (
+            Mani.tail.foldLeft(Mani.head){ (acc, row) => DenseMatrix.vertcat(acc, row) },
+            Mpi.tail.foldLeft(Mpi.head){ (acc, row) => DenseMatrix.vertcat(acc, row) }
+        )
     }
-
-    /* private def mapToAdjMatrix[RowIndex, ColIndex, T](sparse_matrix: Map[RowIndex, Map[ColIndex, T]], to_int: T => Int)(
-        implicit
-        row_to_col: RowIndex =:= ColIndex
-    ): DenseMatrix[Int] = {
-        var nodes_map: Map[ColIndex, Iterable[T]] = Map()
-        sparse_matrix.keys.foreach(source => nodes_map.getOrElseUpdate(row_to_col(source), List()))
-        sparse_matrix.values.foreach(dest_map => dest_map.keys.foreach(dest => nodes_map.getOrElseUpdate(dest, List())))
-        val nodes = nodes_map.keys.toList
-
-        val nb_nodes = nodes.size
-        val values = nodes.map(source => nodes.map(dest => sparse_matrix.getOrElse(row_to_col.flip(source), 0) match {
-            case edge: Map[ColIndex, T] => edge.get(dest) match { case v: Some[T] => to_int(v.get) ; case None => 0 }
-            case 0 => 0
-        }))
-        new DenseMatrix(nb_nodes, nb_nodes, values.flatten.toArray)
-    } */
 
     private def mapToAdjMatrix[RowIndex, ColIndex, T](sparse_matrix: Map[RowIndex, Map[ColIndex, Int]])(
         implicit
