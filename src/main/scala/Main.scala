@@ -82,7 +82,7 @@ object Main extends App {
             })
         }
     ) */
-    val graph_rt_with_communities = transform(graph_rt)(
+    /* val graph_rt_with_communities = transform(graph_rt)(
         (dataset: graph_rt.type) => {
             dataset.data.map(hlist => {
                 val source = get(hlist, W('source))
@@ -90,7 +90,8 @@ object Main extends App {
                 field[W.`'source`.T](source :+ field[W.`'community`.T](get_community(get(source, W('id))))) :: field[W.`'dest`.T](dest :+ field[W.`'community`.T](get_community(get(dest, W('id))))) :: field[W.`'edge`.T](get(hlist, W('edge))) :: HNil
             })
         }
-    )
+    ) */
+    val graph_rt_with_communities = transform(graph_rt)((dataset: graph_rt.type) => community_detection.louvain(dataset, W('weight)))
 
     show_dataset(graph_rt_with_communities, "Graph of Retweets (with communities)")
 
@@ -134,20 +135,17 @@ object Main extends App {
     show_dataset_nomodel(comm_matrix, "Community Matrix")
 
     // Step 8: Calcul de la polarisation
-    val workflow_output = (
+    /* val workflow_output = (
         (adj: adj_matrix.type, comm: comm_matrix.type) => { val nb_commu = comm.values.map(_.keys.toList).toList.flatten.distinct.length ; (List.fill(nb_commu){List.fill(nb_commu){0}}, List.fill(nb_commu){List.fill(nb_commu){0}}) }
+    )(adj_matrix, comm_matrix) */
+    val workflow_output = (
+        (adj: adj_matrix.type, comm: comm_matrix.type) => polarisation.compute(adj, comm)
     )(adj_matrix, comm_matrix)
 
     show_dataset_nomodel(workflow_output, "Workflow Output")
     println()
 
-    import polarisation._
-    import scala.collection.mutable.Map
-    val adj: Map[Int, Map[Int, Int]] = Map(1 -> Map(2 -> 3, 3 -> 2, 4 -> 4, 6 -> 5), 2 -> Map(3 -> 1, 6 -> 6), 3 -> Map(2 -> 5), 4 -> Map(1 -> 1, 5 -> 5, 6 -> 4), 6 -> Map(7 -> 5))
-    val comm: Map[Int, Map[String, Boolean]] = Map(1 -> Map("C1" -> true), 2 -> Map("C1" -> true), 3 -> Map("C1" -> true), 4 -> Map("C2" -> true), 5 -> Map("C2" -> true), 6 -> Map("C2" -> true, "C3" -> true), 7 -> Map("C3" -> true))
-    val (polarisation_matrix, porosity_matrix) = polarisation(adj, comm)
-    println(polarisation_matrix)
-    println(porosity_matrix)
+    
 
     // Idée d'amélioration : utiliser des DataSet en interne des différents types pour meilleure gestion des gros volumes de données.
 }

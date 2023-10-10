@@ -5,7 +5,7 @@ import breeze.linalg._
 import scala.reflect.{ClassTag}
 
 object polarisation {
-    def polarisation[NodeID: ClassTag, CommID: ClassTag](
+    def compute[NodeID: ClassTag, CommID: ClassTag](
         adj: Map[NodeID, Map[NodeID, Int]], 
         comm: Map[NodeID, Map[CommID, Boolean]]
     ) = {
@@ -97,4 +97,7 @@ object polarisation {
         
         (mc, nmc, mct)
     }
+
+    private val adj_toyex: Map[Int, Map[Int, Int]] = Map(1 -> Map(2 -> 3, 3 -> 2, 4 -> 4, 6 -> 5), 2 -> Map(3 -> 1, 6 -> 6), 3 -> Map(2 -> 5), 4 -> Map(1 -> 1, 5 -> 5, 6 -> 4), 6 -> Map(7 -> 5))
+    private val comm_toyex: Map[Int, Map[String, Boolean]] = Map(1 -> Map("C1" -> true), 2 -> Map("C1" -> true), 3 -> Map("C1" -> true), 4 -> Map("C2" -> true), 5 -> Map("C2" -> true), 6 -> Map("C2" -> true, "C3" -> true), 7 -> Map("C3" -> true))
 }

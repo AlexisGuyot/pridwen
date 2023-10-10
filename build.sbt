@@ -39,7 +39,14 @@ libraryDependencies  ++= Seq(
   "org.scalanlp" %% "breeze-viz" % "1.1"
 )
 
-scalaVersion := "2.13.3"
+// Gephi
+resolvers ++= Seq(
+  "gephi-thirdparty" at "https://raw.github.com/gephi/gephi/mvn-thirdparty-repo/"
+)
 
+libraryDependencies += "org.gephi" % "gephi-toolkit" % "0.10.1" classifier "all"
+
+//scalaVersion := "2.13.3"
+// Spark
 libraryDependencies += "org.apache.spark" %% "spark-core" % "3.4.0"
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "3.4.0"
