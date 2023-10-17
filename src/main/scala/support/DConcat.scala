@@ -10,12 +10,12 @@ import pridwen.support.functions.{getFieldValue}
 
 
 // Appends to H1 the elements contained in H2 they are not already in H1 (Distinct Concat). Handles nesting. Output type is the resulting HList.
-trait DConcat[H1, H2] { type Out <: HList ; def apply(in1: H1, in2: H2): Out }
+trait DConcat[H1 <: HList, H2 <: HList] { type Out <: HList ; def apply(in1: H1, in2: H2): Out }
 object DConcat {
-    type Aux[H1, H2, Concat <: HList] = DConcat[H1, H2] { type Out = Concat }
-    def apply[H1, H2](implicit ok: DConcat[H1, H2]): Aux[H1, H2, ok.Out] = ok
+    type Aux[H1 <: HList, H2 <: HList, Concat <: HList] = DConcat[H1, H2] { type Out = Concat }
+    def apply[H1 <: HList, H2 <: HList](implicit ok: DConcat[H1, H2]): Aux[H1, H2, ok.Out] = ok
 
-    protected def inhabit_Type[H1, H2, Concat <: HList](
+    protected def inhabit_Type[H1 <: HList, H2 <: HList, Concat <: HList](
         f: (H1, H2) => Concat
     ): Aux[H1, H2, Concat] 
         = new DConcat[H1, H2] { 
@@ -23,8 +23,8 @@ object DConcat {
             def apply(in1: H1, in2: H2) = f(in1, in2) 
     }
 
-    implicit def launch_terminal_recursion [
-        T1, T2, H1 <: HList, H2 <: HList, 
+    /* implicit def launch_terminal_recursion [
+        T1 <: HList, T2 <: HList, H1 <: HList, H2 <: HList, 
         Concat <: HList
     ](
         implicit
@@ -33,6 +33,16 @@ object DConcat {
         concat: DConcat_TR.Aux[H1, H2, Concat]
     ) = inhabit_Type[T1, T2, Concat](
         (in1: T1, in2: T2) => concat(to_hlist_in1(in1), to_hlist_in2(in2))
+    ) */
+
+    implicit def launch_terminal_recursion [
+        H1 <: HList, H2 <: HList, 
+        Concat <: HList
+    ](
+        implicit
+        concat: DConcat_TR.Aux[H1, H2, Concat]
+    ) = inhabit_Type[H1, H2, Concat](
+        (in1: H1, in2: H2) => concat(in1, in2)
     )
 
     // Private inner type allowing the terminal recursion in H1.

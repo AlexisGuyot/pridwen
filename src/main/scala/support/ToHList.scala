@@ -24,7 +24,7 @@ trait LowPriorityToHList {
   )
 }
 object ToHList extends LowPriorityToHList {
-  def apply[T](implicit ok: ToHList[T]): Aux[T, ok.Out] = ok
+  //def apply[T](implicit ok: ToHList[T]): Aux[T, ok.Out] = ok
 
   implicit def t_is_a_hlist [
     Head, Tail <: HList, 

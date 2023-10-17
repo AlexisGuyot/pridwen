@@ -6,8 +6,7 @@ import pridwen.models.aux.{SelectField, AddField}
 import pridwen.support.functions.{get}
 
 import org.gephi.project.api.{ProjectController, Workspace}
-import org.gephi.graph.api.{GraphController, GraphModel, DirectedGraph, Node, Column}
-import org.gephi.graph.{GraphControllerImpl}
+import org.gephi.graph.api.{GraphController, GraphModel, DirectedGraph}
 import org.gephi.statistics.plugin.{Modularity}
 import org.openide.util.Lookup
 
@@ -25,6 +24,7 @@ object community_detection {
         addTo_source: AddField.Aux[graph_in.Repr, Witness.`'source`.T :: HNil, Witness.`'community`.T, Int, Out0],
         addTo_dest: AddField.Aux[Out0, Witness.`'dest`.T :: HNil, Witness.`'community`.T, Int, New_Schema],
     ): List[New_Schema] = {
+        
         // Init Gephi Toolkit
         val pc: ProjectController = Lookup.getDefault().lookup(classOf[ProjectController])
         pc.newProject()
@@ -55,4 +55,9 @@ object community_detection {
         // New Dataset Creation
         graph_in.data.map(hlist => addTo_dest(addTo_source(hlist, community_map(select_sourceID(hlist).toString)), community_map(select_destID(hlist).toString)))
     } 
+
+
+
+    // Fonction de test
+    def get_community(node_id: Long): String = node_id match { case 1268486802949767200L => "C1" ; case 277430850L => "C1" ; case 1268486302459767200L => "C3" }
 }

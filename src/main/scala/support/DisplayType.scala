@@ -27,20 +27,21 @@ object display {
         println(s"============= ${name}\n")
         println(s"Model: ${m}\n")
         println(s"Schema: \n${schema()}")
-        println(s"Data: ${dataset.data}\n")
+        if(dataset.data.size < 10) println(s"Data: ${dataset.data}\n")
         println("=======================================\n")
     }
 
     def show_dataset_nomodel[T](
         dataset: T, 
-        name: String
+        name: String,
+        show_data: Boolean = true
     )(
         implicit
         print_dataset: PrintType[T]
     ): Unit = {
         println(s"============= ${name}\n")
         println(s"Type: ${print_dataset.apply}\n")
-        println(s"Value: ${dataset}\n")
+        if(show_data) println(s"Value: ${dataset}\n")
         println("=======================================\n")
     }
 

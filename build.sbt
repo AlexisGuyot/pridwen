@@ -50,3 +50,7 @@ libraryDependencies += "org.gephi" % "gephi-toolkit" % "0.10.1" classifier "all"
 // Spark
 libraryDependencies += "org.apache.spark" %% "spark-core" % "3.4.0"
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "3.4.0"
+
+// UPickles + OS-lib
+libraryDependencies += "com.lihaoyi" %% "os-lib" % "0.9.1"
+libraryDependencies += "com.lihaoyi" %% "upickle" % "3.1.3"
