@@ -5,6 +5,8 @@ import shapeless.{HList, ::, HNil}
 import pridwen.support.{ReducePath, DConcat}
 import pridwen.support.functions.{getFieldValue}
 
+import scala.collection.mutable.HashMap
+
 trait And[Paths <: HList]
 object And {
     def apply[Paths <: HList](p: Paths): And[Paths] = new And[Paths] {}
@@ -22,7 +24,7 @@ object joinMode {
 }
 import joinMode._
 
-trait Join[LS <: HList, RS <: HList, LP, RP, M <: JoinMode] { type Out <: HList ; def apply(ldataset: List[LS], rdataset: List[RS]): List[Out] }
+trait Join[LS <: HList, RS <: HList, LP, RP, M <: JoinMode] { type Out <: HList ; def apply(ldataset: List[LS], rdataset: List[RS]): List[Out] ; def apply2[K](ldataset: HashMap[K, List[LS]], rdataset: HashMap[K, List[RS]]): List[Out] }
 object Join {
     def apply[LS <: HList, RS <: HList, LP, RP, M <: JoinMode](implicit ok: Join[LS, RS, LP, RP, M]): Aux[LS, RS, LP, RP, M, ok.Out] = ok
     type Aux[LS <: HList, RS <: HList, LP, RP, M <: JoinMode, Out0 <: HList] = Join[LS, RS, LP, RP, M] { type Out = Out0 }
@@ -38,6 +40,14 @@ object Join {
                 ldataset.foreach(lschema => rdataset.foreach(rschema => 
                     if(condition(lschema, rschema)) do_join(lschema, rschema) +=: join_result
                 ))
+                join_result.to(List)
+            }
+
+            def apply2[K](ldataset: HashMap[K, List[LS]], rdataset: HashMap[K, List[RS]]) = {
+                val join_result = scala.collection.mutable.ListBuffer.empty[Out0]
+                ldataset.keySet.intersect(rdataset.keySet).foreach(key => ldataset(key).foreach(lschema => rdataset(key).foreach(rschema =>
+                    if(condition(lschema, rschema)) do_join(lschema, rschema) +=: join_result
+                )))
                 join_result.to(List)
             }
         }

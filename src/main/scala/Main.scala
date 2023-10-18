@@ -84,96 +84,98 @@ object Main extends App {
     val input_dataset22 = JSON[TweetsQuotes2](dataset_tweets_quotes2.toList)
 
 
-    // =============== Fonctions auxiliaires
-    
-    
-
 
 
     // =============== Construction du workflow
 
     // Step 1: Construction du graphe des retweets
-    val graph_rt = constructGraph(
-        input_dataset1, 
-        //input_dataset12,
+    val graph_rt = time { constructGraph(
+        //input_dataset1, 
+        input_dataset12, 
         W('user) :: W('id) :: HNil, 
         W('retweeted_status) :: W('user) :: W('id) :: HNil, 
         //(W('user) :: W('name) :: HNil) :: HNil,
         //As(W('test), W('retweeted_status) :: W('user) :: W('name) :: HNil) :: HNil,
         //HNil, HNil, HNil
-    )
+    ) }
 
     show_dataset(graph_rt, "Graph of Retweets")
 
     // Step 2: Détection des communautés dans le graphe des retweets
-    /* val graph_rt_with_communities = transform(
-        graph_rt,
-        Add[String](W('source) :: HNil, W('community)) ::
-        Add[String](W('dest) :: HNil, W('community)) :: HNil
-    )(
-        (dataset: graph_rt.type) => {
-            dataset.data.map(hlist => {
-                val source = get(hlist, W('source))
-                val dest = get(hlist, W('dest))
-                field[W.`'source`.T](source :+ field[W.`'community`.T](get_community(get(source, W('id))))) :: field[W.`'dest`.T](dest :+ field[W.`'community`.T](get_community(get(dest, W('id))))) :: field[W.`'edge`.T](get(hlist, W('edge))) :: HNil
-            })
-        }
-    ) */
-    val graph_rt_with_communities = transform(graph_rt)((dataset: graph_rt.type) => community_detection.louvain(dataset, W('weight)))
+    var graph_rt_with_communities = time { transform(graph_rt)((dataset: graph_rt.type) => community_detection.louvain(dataset, W('weight))) }
 
     show_dataset(graph_rt_with_communities, "Graph of Retweets (with communities)")
 
+    // Step 2.1 : Suppression des sommets n'appartenant pas à une communauté significative
+    println(graph_rt_with_communities.nodes[Model.Relation].data.size)
+    println(graph_rt_with_communities.data.size)
+
+    graph_rt_with_communities = time { community_detection.only_keep_significant2(graph_rt_with_communities, W('community)) }
+
+    println(graph_rt_with_communities.nodes[Model.Relation].data.size)
+    println(graph_rt_with_communities.data.size)
+
+    show_dataset(graph_rt_with_communities, "Graph of Retweets (only significant communities)")
+
     // Step 3: Récupération des sommets du graphe des retweets
-    val graph_rt_nodes = graph_rt_with_communities.nodes[Model.Relation]
+    val graph_rt_nodes = time { graph_rt_with_communities.nodes[Model.Relation] }
 
     show_dataset(graph_rt_nodes, "Graph of Retweets Nodes")
 
     // Step 4: Construction du graphe des quotes
-    val graph_quotes = constructGraph(
-        input_dataset2, 
-        //input_dataset22,
+    val graph_quotes = time { constructGraph(
+        //input_dataset2, 
+        input_dataset22,
         W('user) :: W('id) :: HNil, 
         W('quoted_status) :: W('user) :: W('id) :: HNil
-    )
+    ) }
 
     show_dataset(graph_quotes, "Graph of Quotes")
 
     // Step 5: Jointure des deux graphes (seuls les sommets en commun sont conservés (inner), les sommets du graphe résultat récupèrent l'attribut de communauté)
-    val joined_graph = join_in_right(
+    val joined_graph = time { join_in_right(
         graph_rt_nodes, graph_quotes,
         W('id) :: HNil,
         W('source) :: W('id) :: HNil
-    )
-    val joined_graph2 = join_in_right(
+    ) }
+    val joined_graph2 = time { join_in_right(
         graph_rt_nodes, joined_graph,
         W('id) :: HNil,
         W('dest) :: W('id) :: HNil
-    )
+    ) }
+
+    println(joined_graph2.nodes[Model.Relation].data.size)
+    println(joined_graph2.data.size)
 
     show_dataset(joined_graph2, "Joined Graph (Quote-RT)")
 
     // Step 6: Construction de la matrice d'adjacence du graphe joint (matrice carrée d'entiers (poids) indicée par les ID des sommets)
-    val adj_matrix = joined_graph2.adjacency_matrix(W('weight))
+    val adj_matrix = time { joined_graph2.adjacency_matrix(W('weight)) }
 
     show_dataset_nomodel(adj_matrix, "Adjacency Matrix", show_data = false)
 
     // Step 7: Construction de la matrice des communautés du graphe joint (matrice de booléens indicée par les ID des sommets et par les valeurs distinctes des communautés)
-    val comm_matrix = joined_graph2.community_matrix(W('community))
+    val comm_matrix = time { joined_graph2.community_matrix(W('community)) }
 
     show_dataset_nomodel(comm_matrix, "Community Matrix", show_data = false)
 
     // Step 8: Calcul de la polarisation
-    /* val workflow_output = (
-        (adj: adj_matrix.type, comm: comm_matrix.type) => { val nb_commu = comm.values.map(_.keys.toList).toList.flatten.distinct.length ; (List.fill(nb_commu){List.fill(nb_commu){0}}, List.fill(nb_commu){List.fill(nb_commu){0}}) }
-    )(adj_matrix, comm_matrix) */
-    val workflow_output = (
-        (adj: adj_matrix.type, comm: comm_matrix.type) => polarisation.compute(adj, comm)
-    )(adj_matrix, comm_matrix)
+    val workflow_output = time { polarisation.compute(adj_matrix, comm_matrix) }
 
     show_dataset_nomodel(workflow_output, "Workflow Output")
     println()
     
-    println(polarisation.compute(polarisation.adj_toyex, polarisation.comm_toyex))
+    //println(polarisation.compute(polarisation.adj_toyex, polarisation.comm_toyex))
 
     // Idée d'amélioration : utiliser des DataSet en interne des différents types pour meilleure gestion des gros volumes de données.
+
+
+    // Source : https://biercoff.com/easily-measuring-code-execution-time-in-scala/
+    def time[R](block: => R): R = {
+        val t0 = System.nanoTime()
+        val result = block    // call-by-name
+        val t1 = System.nanoTime()
+        println("Elapsed time: " + (t1 - t0) + " ns")
+        result
+    }
 }

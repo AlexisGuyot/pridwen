@@ -1,6 +1,6 @@
 package pridwen.operators
 
-import collection.mutable.Map
+import collection.mutable.HashMap
 
 import shapeless.{HList, ::, HNil, Witness => W}
 import shapeless.labelled.{FieldType => Field, field}

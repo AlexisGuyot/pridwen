@@ -8,13 +8,14 @@ import pridwen.support.{DeepGeneric, RSelector}
 import pridwen.support.functions.{getFieldValue, get}
 import pridwen.models.aux.{IsValidSchema, SelectField}
 
-import collection.mutable.Map
+import collection.mutable.HashMap
 
 
 
 // ========================= Type definition
 
 abstract class Graph[Schema, SourceID, DestID](dataset: List[Schema]) extends Model[Schema](dataset) {
+    // Idée d'amélioration : ajouter des attributs (nombre de sommets, nombre de liens, limite de résolution, etc.)
     def nodes[ModelOut <: Model[_]](mout: ModelOut)(
         implicit
         get_nodes: GetNodes[Repr, ModelOut]
@@ -32,13 +33,13 @@ abstract class Graph[Schema, SourceID, DestID](dataset: List[Schema]) extends Mo
         get_source_id: SelectField.Aux[Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, SourceID_Type],
         get_dest_id: SelectField.Aux[Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, DestID_Type],
         get_edge_weight: SelectField.Aux[Repr, Witness.`'edge`.T :: weight_att.T :: HNil, weight_att.T, Int]
-    ): Map[SourceID_Type, Map[DestID_Type, Int]] = {
-        var sparse_matrix: Map[SourceID_Type, Map[DestID_Type, Int]] = Map()
+    ): HashMap[SourceID_Type, HashMap[DestID_Type, Int]] = {
+        var sparse_matrix: HashMap[SourceID_Type, HashMap[DestID_Type, Int]] = HashMap()
         data.foreach(hlist => {
             val source_id = getFieldValue(get_source_id(hlist))
             val dest_id = getFieldValue(get_dest_id(hlist))
-            var source_map = sparse_matrix.getOrElse(source_id, Map())
-            //var dest_map = sparse_matrix.getOrElse(dest_id, Map())
+            var source_map = sparse_matrix.getOrElse(source_id, HashMap())
+            //var dest_map = sparse_matrix.getOrElse(dest_id, HashMap())
             var current_weight = source_map.getOrElse(dest_id, 0)
             source_map(dest_id) = current_weight + getFieldValue(get_edge_weight(hlist))
             sparse_matrix(source_id) = source_map
@@ -55,13 +56,13 @@ abstract class Graph[Schema, SourceID, DestID](dataset: List[Schema]) extends Mo
         get_dest_id: SelectField.Aux[Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, NodeID_Type],
         get_source_community: SelectField.Aux[Repr, Witness.`'source`.T :: community_att.T :: HNil, community_att.T, Community_Type],
         get_dest_community: SelectField.Aux[Repr, Witness.`'dest`.T :: community_att.T :: HNil, community_att.T, Community_Type],
-    ): Map[NodeID_Type, Map[Community_Type, Boolean]] = {
-        var sparse_matrix: Map[NodeID_Type, Map[Community_Type, Boolean]] = Map()
+    ): HashMap[NodeID_Type, HashMap[Community_Type, Boolean]] = {
+        var sparse_matrix: HashMap[NodeID_Type, HashMap[Community_Type, Boolean]] = HashMap()
         data.foreach(hlist => {
             val source_id = getFieldValue(get_source_id(hlist))
             val dest_id = getFieldValue(get_dest_id(hlist))
-            if(!sparse_matrix.contains(source_id)) sparse_matrix(source_id) = Map((getFieldValue(get_source_community(hlist)), true))
-            if(!sparse_matrix.contains(dest_id)) sparse_matrix(dest_id) = Map((getFieldValue(get_dest_community(hlist)), true))
+            if(!sparse_matrix.contains(source_id)) sparse_matrix(source_id) = HashMap((getFieldValue(get_source_community(hlist)), true))
+            if(!sparse_matrix.contains(dest_id)) sparse_matrix(dest_id) = HashMap((getFieldValue(get_dest_community(hlist)), true))
         })
         sparse_matrix
     }

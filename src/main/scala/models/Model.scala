@@ -5,7 +5,7 @@ import shapeless.labelled.{FieldType => Field, field}
 
 import pridwen.models.aux.{SelectField}
 
-
+import scala.collection.mutable.HashMap
 
 abstract class Model[Schema](dataset: List[Schema]) { 
     type Repr <: HList 
@@ -23,6 +23,15 @@ abstract class Model[Schema](dataset: List[Schema]) {
         val result = scala.collection.mutable.ListBuffer.empty[Field[FieldName,FieldType]] 
         data.foreach(repr => if(filter(repr)) select_field(repr) +=: result)
         result.to(List) 
+    }
+
+    def index[Path_To_Key, KName, KType](path_to_key: Path_To_Key)(
+        implicit
+        select_key: SelectField.Aux[Repr, Path_To_Key, KName, KType]
+    ): HashMap[KType, List[Repr]] = {
+        var index: HashMap[KType, List[Repr]] = HashMap()
+        data.foreach(hlist => { val key = select_key(hlist) ; index(key) = hlist :: index.getOrElse(key, List()) })
+        index
     }
 }
 object Model {
