@@ -115,6 +115,20 @@ object community_detection {
 
 
 
-    // Fonction de test
+    // Fonctions de test
     def get_community(node_id: Long): String = node_id match { case 1268486802949767200L => "C1" ; case 277430850L => "C1" ; case 1268486302459767200L => "C3" }
+
+    def community_from_file[S, SourceID, DestID, Out0 <: HList, New_Schema <: HList](graph: Graph[S, SourceID, DestID])(
+        implicit
+        select_sourceID: SelectField.Aux[graph.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, String],
+        select_destID: SelectField.Aux[graph.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, String],
+        addTo_source: AddField.Aux[graph.Repr, Witness.`'source`.T :: HNil, Witness.`'community`.T, Int, Out0],
+        addTo_dest: AddField.Aux[Out0, Witness.`'dest`.T :: HNil, Witness.`'community`.T, Int, New_Schema]
+    ): List[New_Schema] = {
+        val g_rt = scala.xml.XML.loadFile("/home/alexis/Documents/Tweets/GMerged/g_rt")
+        val nodes: HashMap[String, Int] = HashMap()
+        (g_rt \ "graph" \ "node").foreach(node => nodes((node \ "data").find(d => (d \@ "key") == "v_name").map(_.text).get) = (node \ "data").find(d => (d \@ "key") == "v_community").map(_.text).get.toInt)
+
+        graph.data.map(hlist => addTo_dest(addTo_source(hlist, nodes(select_sourceID(hlist))), nodes(select_destID(hlist))))
+    }
 }

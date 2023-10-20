@@ -1,3 +1,8 @@
+import pridwen.models.{Graph, GetNodes}
+import pridwen.models.aux.{SelectField}
+
+import shapeless.{Witness, ::, HNil}
+
 import scala.collection.mutable.{HashMap, HashSet}
 import scala.collection.parallel.immutable.ParVector
 import breeze.linalg._
@@ -54,6 +59,96 @@ object polarisation {
         })
 
         (man.toDenseMatrix, mp.toDenseMatrix)
+    }
+
+    def compute(ma: CSCMatrix[Int], mc: CSCMatrix[Int]) = {
+        val nmc = CSCMatrix.zeros[Int](mc.rows, mc.cols)
+        val mct = CSCMatrix.zeros[Int](mc.cols, mc.rows)
+        for(r <- 0 to (mc.rows-1)) for(c <- 0 to (mc.cols-1)) {
+            nmc(r,c) = (mc(r,c) - 1).abs
+            mct(c, r) = mc(r,c)
+        }
+
+        val md = ma * mc 
+
+        val i = CSCMatrix.zeros[Int](md.rows, md.cols)
+        val ni = CSCMatrix.zeros[Int](md.rows, md.cols)
+        for(r <- 0 to (md.rows-1)) for(c <- 0 to (md.cols-1)) {
+            i(r,c) = if(md(r,c) == 0) 1 else 0
+            ni(r, c) = if(md(r,c) == 0) 0 else 1
+        }
+
+        val inmc = i *:* nmc
+
+        val man = CSCMatrix.zeros[Double](mc.cols, mc.cols)
+        val mp = CSCMatrix.zeros[Double](mc.cols, mc.cols)
+
+        ParVector.range(0, mc.cols).foreach( i => {
+        //for(i <- 0 to (mc.cols-1)) {
+            val ii = CSCMatrix.tabulate(mc.rows, mc.cols) { case (r, c) => inmc(r, c) * mc(r, i) }
+            val tmp_mdsi = ma * ii
+            val mbsi = DenseVector.zeros[Double](mc.cols)
+
+            val mdsi = CSCMatrix.zeros[Double](mc.rows, mc.cols)
+            val mmdsi = CSCMatrix.zeros[Double](mc.rows, mc.cols)
+            val mvani = CSCMatrix.zeros[Double](mc.rows, mc.cols)
+            val tmp_mpi1 = CSCMatrix.zeros[Double](mc.rows, mc.cols)
+            val mcti = CSCMatrix.zeros[Double](1, mc.rows)
+
+            for(r <- 0 to (mc.rows-1)) for(c <- 0 to (mc.cols-1)) {
+                mdsi(r, c) = tmp_mdsi(r, c) * mc(r, i) * ni(r, c)
+                mmdsi(r, c) = if(mdsi(r,c) != 0) 1.0 else 0
+                mvani(r, c) = if(mdsi(r, c) != 0) if(mdsi(r, c) + md(r, c) != 0) (mdsi(r, c).asInstanceOf[Double] / (mdsi(r, c) + md(r, c))) - 0.5 else 0 else 0
+                tmp_mpi1(r, c) = if(mvani(r, c) < 0) 1.0 else 0
+                mbsi(c) += (if(mvani(r, c) != 0) 1 else 0)
+                mcti(0, r) = mct(i, r).asInstanceOf[Double]
+            }
+
+            val mani1 = mcti * mvani
+            val mani2 = mcti * mmdsi
+            val mpi1 = mcti * tmp_mpi1
+
+            for(j <- 0 to (mc.cols-1)) {
+                man(i,j) = if(mani2(0, j) != 0) mani1(0, j)/mani2(0, j) else 0
+                mp(i,j) = mpi1(0, j) / (if(mbsi(j) != 0) mbsi(j) else 1) * 100
+            }
+        })
+
+        (man.toDenseMatrix, mp.toDenseMatrix)
+    }
+
+    def get_matrices[S, SourceID, DestID, CommT: ClassTag, NodeT: ClassTag](graph: Graph[S, SourceID, DestID], weight_att: Witness, comm_att: Witness)(
+        implicit
+        source_id: SelectField.Aux[graph.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, NodeT],
+        dest_id: SelectField.Aux[graph.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, NodeT],
+        source_community: SelectField.Aux[graph.Repr, Witness.`'source`.T :: comm_att.T :: HNil, comm_att.T, CommT],
+        dest_community: SelectField.Aux[graph.Repr, Witness.`'dest`.T :: comm_att.T :: HNil, comm_att.T, CommT],
+        get_weight: SelectField.Aux[graph.Repr, Witness.`'edge`.T :: weight_att.T :: HNil, weight_att.T, Int],
+    ): (CSCMatrix[Int], CSCMatrix[Int]) = {
+        val comm_set: HashSet[CommT] = HashSet()
+        val comm_map: HashMap[NodeT, CommT] = HashMap()
+        val adj_map: HashMap[NodeT, HashMap[NodeT, Int]] = HashMap()
+        graph.data.foreach(hlist => {
+            val sid = source_id(hlist) ; val did = dest_id(hlist)
+            val scomm = source_community(hlist); val dcomm = dest_community(hlist)
+            
+            comm_set += (scomm, dcomm)
+            comm_map(sid) = scomm ; comm_map(did) = dcomm
+
+            var source_map = adj_map.getOrElse(sid, HashMap())
+            var current_weight = source_map.getOrElse(did, 0)
+            source_map(did) = current_weight + get_weight(hlist)
+            adj_map(sid) = source_map
+        })
+        val distinct_nodes = comm_map.keySet.toArray ; val nb_nodes = distinct_nodes.size
+        val distinct_comm = comm_set.toArray ; val nb_comm = distinct_comm.size
+        val adj_matrix = CSCMatrix.zeros[Int](nb_nodes, nb_nodes)
+        val comm_matrix = CSCMatrix.zeros[Int](nb_nodes, nb_comm)
+        for(i <- 0 to (nb_nodes-1)) {
+            comm_matrix(i, distinct_comm.indexOf(comm_map(distinct_nodes(i)))) = 1
+            adj_map.get(distinct_nodes(i)) match { case None => () ; case Some(source_map) => for(j <- 0 to (nb_nodes-1)) adj_matrix(i,j) = source_map.getOrElse(distinct_nodes(j), 0) }
+        }
+        (adj_matrix, comm_matrix)
     }
 
     private def to_adjacency_matrix[RowIndex: ClassTag, ColIndex, T](sparse_matrix: HashMap[RowIndex, HashMap[ColIndex, Int]])(

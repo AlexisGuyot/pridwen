@@ -54,3 +54,6 @@ libraryDependencies += "org.apache.spark" %% "spark-sql" % "3.4.0"
 // UPickles + OS-lib
 libraryDependencies += "com.lihaoyi" %% "os-lib" % "0.9.1"
 libraryDependencies += "com.lihaoyi" %% "upickle" % "3.1.3"
+
+// Scala XML
+libraryDependencies += "org.scala-lang.modules" %% "scala-xml" % "2.2.0"

@@ -9,173 +9,91 @@ import pridwen.operators.construct._
 import pridwen.operators.join._
 import pridwen.operators.transform._
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ListBuffer, Map}
+
+import time._
 
 object Main extends App {  
 
-    // =============== Chargement des données (fictives)
-
-    case class NUser(id: Long, name: String)
-
-    case class RetweetedStatus(user: NUser)
-    case class QuotedStatus(user: NUser)
-
-    case class TweetsRT(user: NUser, retweeted_status: RetweetedStatus)
-    case class TweetsQuotes(user: NUser, quoted_status: QuotedStatus)
-
-    val dataset_tweets_rt = List(
-        TweetsRT(NUser(1268486802949767200L, "A"), RetweetedStatus(NUser(277430850L, "B"))),
-        TweetsRT(NUser(1268486802949767200L, "A"), RetweetedStatus(NUser(277430850L, "B"))),
-        TweetsRT(NUser(1268486302459767200L, "C"), RetweetedStatus(NUser(277430850L, "B"))),        
-    )
-    val dataset_tweets_quotes = List(
-        TweetsQuotes(NUser(1268486802949767200L, "A"), QuotedStatus(NUser(277430850L, "B"))),
-        TweetsQuotes(NUser(1268486802949767200L, "A"), QuotedStatus(NUser(1268486302459767200L, "C"))),
-        TweetsQuotes(NUser(277430850L, "B"), QuotedStatus(NUser(1268486802949767200L, "A"))),
-        TweetsQuotes(NUser(1268486302459767200L, "C"), QuotedStatus(NUser(1268486802949767200L, "A"))),    
-        TweetsQuotes(NUser(2, "D"), QuotedStatus(NUser(1268486802949767200L, "A"))), 
-        TweetsQuotes(NUser(2, "D"), QuotedStatus(NUser(3, "E"))),         
-        TweetsQuotes(NUser(2, "D"), QuotedStatus(NUser(3, "E"))),       
-    )
-
-    val input_dataset1 = JSON[TweetsRT](dataset_tweets_rt)
-    val input_dataset2 = JSON[TweetsQuotes](dataset_tweets_quotes)
-
-    // Idée d'amélioration : que le schéma réel de dataset_tweets_rt ou dataset_tweets_quotes ne soit pas forcément strictement égal à TweetsRT ou TweetsQuotes mais inclus (= possède au moins les attributs spécifiés dans TweetsRT/TweetsQuotes)
-
-
-    // =============== Chargement des données (réelles)
-
-    def rec_contains(json: ujson.Value, path: List[String]): Boolean = if(path.isEmpty) true else json.obj.contains(path.head) && rec_contains(json(path.head), path.tail)
-    def rec_format(json: ujson.Value, path: List[String]): String = if(path.length == 1) s""""${path.head}": ${json(path.head)}""" else s""""${path.head}": { ${rec_format(json(path.head), path.tail)} }"""
-    def select_fields(json: ujson.Value, paths: List[List[String]], acc: List[String] = List()): List[String] = if(paths.isEmpty) acc else select_fields(json, paths.tail, if(rec_contains(json, paths.head)) rec_format(json, paths.head)::acc else acc)
-
-
-    val path = os.Path("/home/alexis/Documents/Tweets")
-    /* var fields = ListBuffer[String]()
-    for(file <- os.list(path / "2022-2")) for(line <- os.read.lines.stream(file)) {
-        val json = ujson.read(line)
-        fields = select_fields(json, List(List("id"), List("text"), List("user", "id"))).to(ListBuffer)
-        if(rec_contains(json, List("retweeted_status"))) fields += """"retweeted_status": {""" + select_fields(json("retweeted_status"), List(List("id"), List("text"), List("user", "id"))).mkString(", ") + " }"
-        if(rec_contains(json, List("quoted_status"))) fields += """"quoted_status": {""" + select_fields(json("quoted_status"), List(List("id"), List("text"), List("user", "id"))).mkString(", ") + " }"
-        os.write.append(path / "L2022-2" / (file.last + ".json"), "{ " + fields.mkString(", ") + " }\n")
-    } */
- 
-    case class User(id: Long)
-
-    case class RetweetedStatus2(user: User)
-    case class QuotedStatus2(user: User)
-
-    case class TweetsRT2(user: User, retweeted_status: RetweetedStatus2) 
-    case class TweetsQuotes2(user: User, quoted_status: QuotedStatus2)
-
-    var dataset_tweets_rt2 = ListBuffer[TweetsRT2]()
-    var dataset_tweets_quotes2 = ListBuffer[TweetsQuotes2]()
-    var cmp = 0
-    val nb_files = os.list(path / "L2022-2").size
-    os.list(path / "L2022-2").foreach(file => { os.read.lines.stream(file).foreach(line => {
-        val json = ujson.read(line)
-        if(json.obj.contains("retweeted_status")) dataset_tweets_rt2 += TweetsRT2(User(json("user")("id").num.longValue), RetweetedStatus2(User(json("retweeted_status")("user")("id").num.longValue)))
-        if(json.obj.contains("quoted_status")) dataset_tweets_quotes2 += TweetsQuotes2(User(json("user")("id").num.longValue), QuotedStatus2(User(json("quoted_status")("user")("id").num.longValue)))
-    }) ; println(s"${cmp+1}/${nb_files}: dataset_tweets_rt2 = ${dataset_tweets_rt2.size} ; dataset_tweets_quotes2 = ${dataset_tweets_quotes2.size}") ; cmp += 1 })
-    println(dataset_tweets_rt2.size)
-    println(dataset_tweets_quotes2.size)
-    val input_dataset12 = JSON[TweetsRT2](dataset_tweets_rt2.toList)
-    val input_dataset22 = JSON[TweetsQuotes2](dataset_tweets_quotes2.toList)
-
-
-
-
     // =============== Construction du workflow
+
+    import data.{TweetsRT, TweetsRT2, TweetsQuotes, TweetsQuotes2}
+
+    val (rep, file) = if(false) ("GMerged", "cs.json") else ("L2022-2", "")
+    //val (input_dataset1, input_dataset2) = (JSON[TweetsRT](data.fake_tweets_rt), JSON[TweetsQuotes](data.fake_tweets_q)) 
+    val (input_dataset1, input_dataset2) = { val (data_rt, data_q) = data.load_json(rep, file) ; (JSON[TweetsRT2](data_rt), JSON[TweetsQuotes2](data_q)) }
 
     // Step 1: Construction du graphe des retweets
     val graph_rt = time { constructGraph(
-        //input_dataset1, 
-        input_dataset12, 
+        input_dataset1, 
         W('user) :: W('id) :: HNil, 
-        W('retweeted_status) :: W('user) :: W('id) :: HNil, 
-        //(W('user) :: W('name) :: HNil) :: HNil,
-        //As(W('test), W('retweeted_status) :: W('user) :: W('name) :: HNil) :: HNil,
-        //HNil, HNil, HNil
+        W('retweeted_status) :: W('user) :: W('id) :: HNil
     ) }
 
+    println(s"|V| = ${graph_rt.nodes[Model.Relation].data.size} ; |E| = ${graph_rt.data.size}")
     show_dataset(graph_rt, "Graph of Retweets")
 
     // Step 2: Détection des communautés dans le graphe des retweets
     var graph_rt_with_communities = time { transform(graph_rt)((dataset: graph_rt.type) => community_detection.louvain(dataset, W('weight))) }
 
+    println(s"|V| = ${graph_rt.nodes[Model.Relation].data.size} ; |E| = ${graph_rt.data.size}")
     show_dataset(graph_rt_with_communities, "Graph of Retweets (with communities)")
 
-    // Step 2.1 : Suppression des sommets n'appartenant pas à une communauté significative
-    println(graph_rt_with_communities.nodes[Model.Relation].data.size)
-    println(graph_rt_with_communities.data.size)
-
+    // Step 3: Suppression des sommets n'appartenant pas à une communauté significative
     graph_rt_with_communities = time { community_detection.only_keep_significant2(graph_rt_with_communities, W('community)) }
 
-    println(graph_rt_with_communities.nodes[Model.Relation].data.size)
-    println(graph_rt_with_communities.data.size)
-
+    println(s"|V| = ${graph_rt_with_communities.nodes[Model.Relation].data.size} ; |E| = ${graph_rt_with_communities.data.size}")
     show_dataset(graph_rt_with_communities, "Graph of Retweets (only significant communities)")
 
-    // Step 3: Récupération des sommets du graphe des retweets
+    // Step 4: Récupération des sommets du graphe des retweets
     val graph_rt_nodes = time { graph_rt_with_communities.nodes[Model.Relation] }
 
+    println(s"|rows| = ${graph_rt_nodes.data.size}")
     show_dataset(graph_rt_nodes, "Graph of Retweets Nodes")
 
-    // Step 4: Construction du graphe des quotes
+    // Step 5: Construction du graphe des quotes
     val graph_quotes = time { constructGraph(
-        //input_dataset2, 
-        input_dataset22,
+        input_dataset2, 
         W('user) :: W('id) :: HNil, 
         W('quoted_status) :: W('user) :: W('id) :: HNil
     ) }
 
+    println(s"|V| = ${graph_quotes.nodes[Model.Relation].data.size} ; |E| = ${graph_quotes.data.size}")
     show_dataset(graph_quotes, "Graph of Quotes")
 
-    // Step 5: Jointure des deux graphes (seuls les sommets en commun sont conservés (inner), les sommets du graphe résultat récupèrent l'attribut de communauté)
+    // Step 6: Jointure des deux graphes (seuls les sommets en commun sont conservés (inner), les sommets du graphe résultat récupèrent l'attribut de communauté)
     val joined_graph = time { join_in_right(
-        graph_rt_nodes, graph_quotes,
-        W('id) :: HNil,
-        W('source) :: W('id) :: HNil
-    ) }
-    val joined_graph2 = time { join_in_right(
-        graph_rt_nodes, joined_graph,
+        graph_rt_nodes, join_in_right(
+            graph_rt_nodes, graph_quotes,
+            W('id) :: HNil,
+            W('source) :: W('id) :: HNil
+        ),
         W('id) :: HNil,
         W('dest) :: W('id) :: HNil
     ) }
 
-    println(joined_graph2.nodes[Model.Relation].data.size)
-    println(joined_graph2.data.size)
+    println(s"|V| = ${joined_graph.nodes[Model.Relation].data.size} ; |E| = ${joined_graph.data.size}")
+    show_dataset(joined_graph, "Joined Graph (Quote-RT)")
 
-    show_dataset(joined_graph2, "Joined Graph (Quote-RT)")
+    /* // Step 7: Construction de la matrice d'adjacence du graphe joint (matrice carrée d'entiers (poids) indicée par les ID des sommets)
+    val adj_matrix = time { joined_graph.adjacency_matrix(W('weight)) }
 
-    // Step 6: Construction de la matrice d'adjacence du graphe joint (matrice carrée d'entiers (poids) indicée par les ID des sommets)
-    val adj_matrix = time { joined_graph2.adjacency_matrix(W('weight)) }
-
+    //println(s"Size = ${adj_matrix.rows} x ${adj_matrix.cols}")
     show_dataset_nomodel(adj_matrix, "Adjacency Matrix", show_data = false)
 
-    // Step 7: Construction de la matrice des communautés du graphe joint (matrice de booléens indicée par les ID des sommets et par les valeurs distinctes des communautés)
-    val comm_matrix = time { joined_graph2.community_matrix(W('community)) }
+    // Step 8: Construction de la matrice des communautés du graphe joint (matrice de booléens indicée par les ID des sommets et par les valeurs distinctes des communautés)
+    val comm_matrix = time { joined_graph.community_matrix(W('community)) }
 
-    show_dataset_nomodel(comm_matrix, "Community Matrix", show_data = false)
+   // println(s"Size = ${adj_matrix.rows} x ${adj_matrix.cols}")
+    show_dataset_nomodel(comm_matrix, "Community Matrix", show_data = false) */
 
-    // Step 8: Calcul de la polarisation
+    val (adj_matrix, comm_matrix) = time { polarisation.get_matrices(joined_graph, W('weight), W('community)) }
+
+    // Step 9: Calcul de la polarisation
     val workflow_output = time { polarisation.compute(adj_matrix, comm_matrix) }
 
-    show_dataset_nomodel(workflow_output, "Workflow Output")
+    show_dataset_nomodel(workflow_output, "Workflow Output") 
     println()
     
     //println(polarisation.compute(polarisation.adj_toyex, polarisation.comm_toyex))
-
-    // Idée d'amélioration : utiliser des DataSet en interne des différents types pour meilleure gestion des gros volumes de données.
-
-
-    // Source : https://biercoff.com/easily-measuring-code-execution-time-in-scala/
-    def time[R](block: => R): R = {
-        val t0 = System.nanoTime()
-        val result = block    // call-by-name
-        val t1 = System.nanoTime()
-        println("Elapsed time: " + (t1 - t0) + " ns")
-        result
-    }
 }
