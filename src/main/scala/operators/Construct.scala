@@ -27,12 +27,12 @@ object construct {
         res_schema: Res_Schema =:= ((Field[SourceID_Name, NodeID_Type] :: HNil) :: (Field[DestID_Name, NodeID_Type] :: HNil) :: (Field[W.`'weight`.T, Int] :: HNil) :: HNil),
         res_model: IsValidGraph[Res_Schema, SourceID_Name, DestID_Name]
     ): Graph.Aux[Res_Schema, SourceID_Name, DestID_Name, res_model.Repr] = {
-        val d = dataset.data
-                .groupBy(schema => (get_source_id(schema) :: HNil, get_dest_id(schema) :: HNil))
-                .mapValues(_.size)
-                .map { case (key, value) => key._1 :: key._2 :: (field[W.`'weight`.T](value)::HNil) :: HNil }
-                .toList
-        res_model(d.asInstanceOf[List[Res_Schema]])
+        var d: List[Res_Schema] = List()
+        val tmp = dataset.data
+                    .groupBy(schema => (get_source_id(schema) :: HNil, get_dest_id(schema) :: HNil))
+                    .mapValues(_.size)
+                    .foreach { case (key, value) => d = res_schema.flip(key._1 :: key._2 :: (field[W.`'weight`.T](value)::HNil) :: HNil) :: d }
+        res_model(d)
     }
     
     def constructGraph [

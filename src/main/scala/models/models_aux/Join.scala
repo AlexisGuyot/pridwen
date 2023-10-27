@@ -44,8 +44,9 @@ object Join {
             }
 
             def apply2[K](ldataset: HashMap[K, List[LS]], rdataset: HashMap[K, List[RS]]) = {
+                import scala.collection.parallel.CollectionConverters._
                 val join_result = scala.collection.mutable.ListBuffer.empty[Out0]
-                ldataset.keySet.intersect(rdataset.keySet).foreach(key => ldataset(key).foreach(lschema => rdataset(key).foreach(rschema =>
+                ldataset.keySet.intersect(rdataset.keySet).par.foreach(key => ldataset(key).foreach(lschema => rdataset(key).foreach(rschema =>
                     if(condition(lschema, rschema)) do_join(lschema, rschema) +=: join_result
                 )))
                 join_result.to(List)

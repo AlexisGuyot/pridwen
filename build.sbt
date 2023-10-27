@@ -57,3 +57,7 @@ libraryDependencies += "com.lihaoyi" %% "upickle" % "3.1.3"
 
 // Scala XML
 libraryDependencies += "org.scala-lang.modules" %% "scala-xml" % "2.2.0"
+
+// Parallel collections
+libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4"
+

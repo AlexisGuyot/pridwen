@@ -9,6 +9,7 @@ import pridwen.support.functions.{getFieldValue, get}
 import pridwen.models.aux.{IsValidSchema, SelectField}
 
 import collection.mutable.HashMap
+import collection.parallel.mutable.{ParHashSet}
 
 
 
@@ -205,9 +206,13 @@ object GetNodes extends LowPriorityGetNodes {
         nodes_model.Out
     ](
         (dataset: List[FieldType[Witness.`'source`.T, SourceSchema] :: FieldType[Witness.`'dest`.T, DestSchema] :: FieldType[Witness.`'edge`.T, EdgeSchema] :: HNil]) => { 
-            val nodes = scala.collection.mutable.ListBuffer.empty[DestSchema]
+            import scala.collection.parallel.CollectionConverters._
+
+            /* val nodes = scala.collection.mutable.ListBuffer.empty[DestSchema]
             dataset.foreach(hlist => nodes ++= List(convert_to_dest(get(hlist, Witness('source))), get(hlist, Witness('dest))))
-            nodes_model(nodes.distinct.to(List))
+            nodes_model(nodes.distinct.to(List)) */
+            val nodes = dataset.par.map(hlist => ParHashSet(convert_to_dest(get(hlist, Witness('source))),get(hlist, Witness('dest)))).flatten.toSet //nodes ++= List(convert_to_dest(get(hlist, Witness('source))), get(hlist, Witness('dest)))
+            nodes_model(nodes.toList)
         }
     )
 }
