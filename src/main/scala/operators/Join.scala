@@ -6,7 +6,7 @@ import pridwen.support.functions.{getFieldValue}
 import pridwen.models._
 import pridwen.models.aux.{IsValidSchema, Join, joinMode}
 
-import scala.collection.mutable.{HashMap}
+import scala.collection.mutable.{Map}
 
 object join {
     // Idées d'améliorations : Support graphes pour la fonction join, Support inner/left/right/full join instances.
@@ -111,10 +111,19 @@ object join {
     )(
         implicit
         compute_join: Join.Aux[ldataset.Repr, rdataset.Repr, Path_To_Left_Key, Path_To_Right_Key, joinMode.InRight, New_Schema],
-        lindex: pridwen.models.aux.Index.Aux[ldataset.Repr, Path_To_Left_Key, HashMap[KeyType, List[ldataset.Repr]]],
-        rindex: pridwen.models.aux.Index.Aux[rdataset.Repr, Path_To_Right_Key, HashMap[KeyType, List[rdataset.Repr]]],
+        lindex: pridwen.models.aux.Index.Aux[ldataset.Repr, Path_To_Left_Key, Map[KeyType, List[ldataset.Repr]]],
+        rindex: pridwen.models.aux.Index.Aux[rdataset.Repr, Path_To_Right_Key, Map[KeyType, List[rdataset.Repr]]],
         res_model: IsValidGraph[New_Schema, SourceID, DestID]
     ): Graph.Aux[New_Schema, SourceID, DestID, res_model.Repr] 
         //= res_model(compute_join(ldataset.data, rdataset.data))
-        = res_model(compute_join.apply2(lindex(ldataset.data), rindex(rdataset.data)))
+        = time { res_model(time { compute_join.apply2(time { lindex(ldataset.data) }, time { rindex(rdataset.data) }) }) }
+
+
+    private def time[R](block: => R): R = {
+        val t0 = System.nanoTime()
+        val result = block    // call-by-name
+        val t1 = System.nanoTime()
+        println("Elapsed time: " + (t1 - t0) + " ns")
+        result
+    } 
 }

@@ -10,20 +10,21 @@ import org.gephi.graph.api.{GraphController, GraphModel, DirectedGraph}
 import org.gephi.statistics.plugin.{Modularity}
 import org.openide.util.Lookup
 
-import scala.collection.mutable.{HashMap, HashSet}
+import scala.collection.mutable.{Map, HashSet}
 import scala.collection.parallel.mutable.{ParHashMap}
 
 object community_detection {
     def louvain[Schema, SourceID, DestID, SourceSchema <: HList, DestSchema <: HList, EdgeSchema <: HList, Out0 <: HList, New_Schema <: HList](
         graph_in: Graph[Schema, SourceID, DestID], 
-        weight_att: Witness
+        weight_att: Witness,
+        comm_att: Witness
     )(
         implicit
         select_sourceID: SelectField[graph_in.Repr, Witness.`'source`.T :: SourceID :: HNil],
         select_destID: SelectField[graph_in.Repr, Witness.`'dest`.T :: DestID :: HNil],
         select_weight: SelectField.Aux[graph_in.Repr, Witness.`'edge`.T :: weight_att.T :: HNil, weight_att.T, Int],
-        addTo_source: AddField.Aux[graph_in.Repr, Witness.`'source`.T :: HNil, Witness.`'community`.T, Int, Out0],
-        addTo_dest: AddField.Aux[Out0, Witness.`'dest`.T :: HNil, Witness.`'community`.T, Int, New_Schema],
+        addTo_source: AddField.Aux[graph_in.Repr, Witness.`'source`.T :: HNil, comm_att.T, Int, Out0],
+        addTo_dest: AddField.Aux[Out0, Witness.`'dest`.T :: HNil, comm_att.T, Int, New_Schema],
     ): List[New_Schema] = {
 
         // Init Gephi Toolkit
@@ -50,7 +51,7 @@ object community_detection {
         modularity.execute(graphModel)
 
         val community = graphModel.getNodeTable().getColumn(Modularity.MODULARITY_CLASS)
-        var community_map: HashMap[String, Int] = HashMap()
+        var community_map: Map[String, Int] = Map()
         gephi_graph.getNodes.toArray.foreach(node => community_map(node.getId.asInstanceOf[String]) = node.getAttribute(community).asInstanceOf[Int])
         
         // New Dataset Creation
@@ -71,7 +72,7 @@ object community_detection {
         res_model: IsValidGraph[graph.Repr, SourceID, DestID]
     ): Graph.Aux[graph.Repr, SourceID, DestID, res_model.Repr] = {
         var nb_edges = 0
-        val community_sizes: HashMap[CType, HashSet[IDType]] = HashMap() 
+        val community_sizes: Map[CType, HashSet[IDType]] = Map() 
 
         graph.data.foreach(edge => { nb_edges += 1 ; 
             val scomm = source_community(edge) ; val dcomm = dest_community(edge) 
@@ -101,20 +102,23 @@ object community_detection {
     ): Graph.Aux[graph.Repr, SourceID, DestID, res_model.Repr] = {
         import scala.collection.parallel.CollectionConverters._
 
-        val community_sizes: ParHashMap[CType, Int] = ParHashMap() 
+        val community_sizes: Map[CType, Int] = Map() 
         
-        get_nodes(graph.data).data.par.foreach(node => { 
+        println("Tailles communautés")
+        time { get_nodes(graph.data).data.foreach(node => { 
             val comm = get_community(node)
             community_sizes(comm) = community_sizes.getOrElse(comm, 0) + 1
-        })        
+        }) }        
 
-        println(community_sizes.filter { case (key,value) => value > java.lang.Math.sqrt(2*graph.data.size) })
+        //println("Afficher communautés significatives")
+        //time { println(community_sizes.filter { case (key,value) => value > java.lang.Math.sqrt(2*graph.data.size) }) }
 
+        println("Création nouveau graphe significatif")
         val resolution_limit = java.lang.Math.sqrt(2*graph.data.size)
-        res_model(graph.data.par.filter(hlist => 
+        time { res_model(time { graph.data.par.filter(hlist => 
             (community_sizes(source_community(hlist)) > resolution_limit) && 
             (community_sizes(dest_community(hlist)) > resolution_limit)
-        ).toList)
+        ).toList }) }
     }
 
 
@@ -123,26 +127,34 @@ object community_detection {
     // Fonctions de test
     def get_community(node_id: Long): String = node_id match { case 1268486802949767200L => "C1" ; case 277430850L => "C1" ; case 1268486302459767200L => "C3" }
 
-    def community_from_file[S, SourceID, DestID, Out0 <: HList, New_Schema <: HList](graph: Graph[S, SourceID, DestID])(
+    def community_from_file[S, SourceID, DestID, Out0 <: HList, New_Schema <: HList, NodeID](graph: Graph[S, SourceID, DestID])(
         implicit
-        select_sourceID: SelectField.Aux[graph.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, String],
-        select_destID: SelectField.Aux[graph.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, String],
+        select_sourceID: SelectField.Aux[graph.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, Double],
+        select_destID: SelectField.Aux[graph.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, Double],
         addTo_source: AddField.Aux[graph.Repr, Witness.`'source`.T :: HNil, Witness.`'community`.T, Int, Out0],
         addTo_dest: AddField.Aux[Out0, Witness.`'dest`.T :: HNil, Witness.`'community`.T, Int, New_Schema]
     ): List[New_Schema] = {
         import scala.collection.parallel.CollectionConverters._
 
-        val g_rt = scala.xml.XML.loadFile("/home/alexis/Documents/Tweets/GMerged/g_rt")
-        //val nodes: HashMap[String, Int] = HashMap()
-        //(g_rt \ "graph" \ "node").foreach(node => nodes((node \ "data").find(d => (d \@ "key") == "v_name").map(_.text).get) = (node \ "data").find(d => (d \@ "key") == "v_community").map(_.text).get.toInt)
+        println("Chargement XML")
+        val g_rt = time { scala.xml.XML.loadFile("/home/alexis/Documents/Tweets/GMerged/g_rt") }
+        val nodes: Map[Double, Int] = Map()
+        println("Parcours XML")
+        time { (g_rt \ "graph" \ "node").foreach(node => nodes((node \ "data").find(d => (d \@ "key") == "v_name").map(_.text).get.toDouble) = (node \ "data").find(d => (d \@ "key") == "v_community").map(_.text).get.toInt) }
 
-        val nodes: ParHashMap[String, Int] = ParHashMap()
-        (g_rt \ "graph" \ "node").par.foreach(node => nodes += ((node \ "data").find(d => (d \@ "key") == "v_name").map(_.text).get -> (node \ "data").find(d => (d \@ "key") == "v_community").map(_.text).get.toInt))
-
-        graph.data.par.map(hlist => {
+        println("Création liste arêtes")
+        time { graph.data.par.map(hlist => {
             val sourceID = select_sourceID(hlist) ; val destID = select_destID(hlist)
-            if(sourceID == "620998720" || destID == "620998720") println(hlist)
             addTo_dest(addTo_source(hlist, nodes(sourceID)), nodes(destID))
-        }).toList
+        }).toList }
     }
+
+    // Source : https://biercoff.com/easily-measuring-code-execution-time-in-scala/
+    private def time[R](block: => R): R = {
+        val t0 = System.nanoTime()
+        val result = block    // call-by-name
+        val t1 = System.nanoTime()
+        println("Elapsed time: " + (t1 - t0) + " ns")
+        result
+    } 
 }

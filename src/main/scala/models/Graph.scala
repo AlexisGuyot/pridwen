@@ -8,7 +8,7 @@ import pridwen.support.{DeepGeneric, RSelector}
 import pridwen.support.functions.{getFieldValue, get}
 import pridwen.models.aux.{IsValidSchema, SelectField}
 
-import collection.mutable.HashMap
+import collection.mutable.Map
 import collection.parallel.mutable.{ParHashSet}
 
 
@@ -34,18 +34,18 @@ abstract class Graph[Schema, SourceID, DestID](dataset: List[Schema]) extends Mo
         get_source_id: SelectField.Aux[Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, SourceID_Type],
         get_dest_id: SelectField.Aux[Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, DestID_Type],
         get_edge_weight: SelectField.Aux[Repr, Witness.`'edge`.T :: weight_att.T :: HNil, weight_att.T, Int]
-    ): HashMap[SourceID_Type, HashMap[DestID_Type, Int]] = {
-        var sparse_matrix: HashMap[SourceID_Type, HashMap[DestID_Type, Int]] = HashMap()
+    ): Map[SourceID_Type, Map[DestID_Type, Int]] = {
+        var sparse_matrix: Map[SourceID_Type, Map[DestID_Type, Int]] = Map()
         data.foreach(hlist => {
             val source_id = getFieldValue(get_source_id(hlist))
             val dest_id = getFieldValue(get_dest_id(hlist))
 
-            var source_map = sparse_matrix.getOrElse(source_id, HashMap())
+            var source_map = sparse_matrix.getOrElse(source_id, Map())
             var current_weight = source_map.getOrElse(dest_id, 0)
             source_map(dest_id) = current_weight + getFieldValue(get_edge_weight(hlist))
             sparse_matrix(source_id) = source_map
 
-            // var dest_map = sparse_matrix.getOrElse(dest_id, HashMap())
+            // var dest_map = sparse_matrix.getOrElse(dest_id, Map())
             // sparse_matrix(dest_id) = dest_map
         })
         sparse_matrix
@@ -59,13 +59,13 @@ abstract class Graph[Schema, SourceID, DestID](dataset: List[Schema]) extends Mo
         get_dest_id: SelectField.Aux[Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, NodeID_Type],
         get_source_community: SelectField.Aux[Repr, Witness.`'source`.T :: community_att.T :: HNil, community_att.T, Community_Type],
         get_dest_community: SelectField.Aux[Repr, Witness.`'dest`.T :: community_att.T :: HNil, community_att.T, Community_Type],
-    ): HashMap[NodeID_Type, HashMap[Community_Type, Boolean]] = {
-        var sparse_matrix: HashMap[NodeID_Type, HashMap[Community_Type, Boolean]] = HashMap()
+    ): Map[NodeID_Type, Map[Community_Type, Boolean]] = {
+        var sparse_matrix: Map[NodeID_Type, Map[Community_Type, Boolean]] = Map()
         data.foreach(hlist => {
             val source_id = getFieldValue(get_source_id(hlist))
             val dest_id = getFieldValue(get_dest_id(hlist))
-            if(!sparse_matrix.contains(source_id)) sparse_matrix(source_id) = HashMap((getFieldValue(get_source_community(hlist)), true))
-            if(!sparse_matrix.contains(dest_id)) sparse_matrix(dest_id) = HashMap((getFieldValue(get_dest_community(hlist)), true))
+            if(!sparse_matrix.contains(source_id)) sparse_matrix(source_id) = Map((getFieldValue(get_source_community(hlist)), true))
+            if(!sparse_matrix.contains(dest_id)) sparse_matrix(dest_id) = Map((getFieldValue(get_dest_community(hlist)), true))
         })
         sparse_matrix
     }
@@ -211,7 +211,8 @@ object GetNodes extends LowPriorityGetNodes {
             /* val nodes = scala.collection.mutable.ListBuffer.empty[DestSchema]
             dataset.foreach(hlist => nodes ++= List(convert_to_dest(get(hlist, Witness('source))), get(hlist, Witness('dest))))
             nodes_model(nodes.distinct.to(List)) */
-            val nodes = dataset.par.map(hlist => ParHashSet(convert_to_dest(get(hlist, Witness('source))),get(hlist, Witness('dest)))).flatten.toSet //nodes ++= List(convert_to_dest(get(hlist, Witness('source))), get(hlist, Witness('dest)))
+            //val nodes = dataset.par.map(hlist => ParHashSet(convert_to_dest(get(hlist, Witness('source))),get(hlist, Witness('dest)))).flatten.toSet //nodes ++= List(convert_to_dest(get(hlist, Witness('source))), get(hlist, Witness('dest)))
+            val nodes = dataset.par.map(hlist => Set(convert_to_dest(get(hlist, Witness('source))),get(hlist, Witness('dest)))).flatten.distinct
             nodes_model(nodes.toList)
         }
     )

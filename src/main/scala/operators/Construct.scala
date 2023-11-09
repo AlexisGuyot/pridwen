@@ -1,6 +1,6 @@
 package pridwen.operators
 
-import collection.mutable.HashMap
+import collection.mutable.Map
 
 import shapeless.{HList, ::, HNil, Witness => W}
 import shapeless.labelled.{FieldType => Field, field}
@@ -11,6 +11,15 @@ import pridwen.models.aux.{SelectField, SelectManyFields, SelectSiblings}
 import pridwen.support.functions.{getFieldValue}
 
 object construct {
+    // Source : https://biercoff.com/easily-measuring-code-execution-time-in-scala/
+    private def time[R](block: => R): R = {
+        val t0 = System.nanoTime()
+        val result = block    // call-by-name
+        val t1 = System.nanoTime()
+        println("Elapsed time: " + (t1 - t0) + " ns")
+        result
+    } 
+
     def constructGraph [
         Schema, ModelIn[_] <: Model[_], 
         Path_To_Source_ID <: HList, SourceID_Name, NodeID_Type,
@@ -27,12 +36,16 @@ object construct {
         res_schema: Res_Schema =:= ((Field[SourceID_Name, NodeID_Type] :: HNil) :: (Field[DestID_Name, NodeID_Type] :: HNil) :: (Field[W.`'weight`.T, Int] :: HNil) :: HNil),
         res_model: IsValidGraph[Res_Schema, SourceID_Name, DestID_Name]
     ): Graph.Aux[Res_Schema, SourceID_Name, DestID_Name, res_model.Repr] = {
-        var d: List[Res_Schema] = List()
-        val tmp = dataset.data
-                    .groupBy(schema => (get_source_id(schema) :: HNil, get_dest_id(schema) :: HNil))
-                    .mapValues(_.size)
-                    .foreach { case (key, value) => d = res_schema.flip(key._1 :: key._2 :: (field[W.`'weight`.T](value)::HNil) :: HNil) :: d }
-        res_model(d)
+        import scala.collection.parallel.CollectionConverters._
+        println("Aggrégation arêtes")
+        //val d = time { time { time { time { time { dataset.data.par
+        val d = time { dataset.data.par
+                .groupBy(schema => (get_source_id(schema) :: HNil, get_dest_id(schema) :: HNil)) //}
+                .mapValues(_.size) //}
+                .map { case (key, value) => key._1 :: key._2 :: (field[W.`'weight`.T](value)::HNil) :: HNil } //} }
+                .toList }
+        println("Chargement graphe")
+        time { res_model(time { d.asInstanceOf[List[Res_Schema]] }) }
     }
     
     def constructGraph [

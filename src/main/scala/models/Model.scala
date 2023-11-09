@@ -5,13 +5,15 @@ import shapeless.labelled.{FieldType => Field, field}
 
 import pridwen.models.aux.{SelectField}
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable.Map
+
+import scala.collection.parallel.CollectionConverters._
 
 abstract class Model[Schema](dataset: List[Schema]) { 
     type Repr <: HList 
     def toRepr(schema: Schema): Repr 
 
-    val data: List[Repr] = dataset.map(schema => toRepr(schema))
+    val data: List[Repr] = dataset.par.map(schema => toRepr(schema)).toList
 
     def get[Path, FieldName, FieldType](
         path: Path, 
@@ -28,8 +30,8 @@ abstract class Model[Schema](dataset: List[Schema]) {
     def index[Path_To_Key, KName, KType](path_to_key: Path_To_Key)(
         implicit
         select_key: SelectField.Aux[Repr, Path_To_Key, KName, KType]
-    ): HashMap[KType, List[Repr]] = {
-        var index: HashMap[KType, List[Repr]] = HashMap()
+    ): Map[KType, List[Repr]] = {
+        var index: Map[KType, List[Repr]] = Map()
         data.foreach(hlist => { val key = select_key(hlist) ; index(key) = hlist :: index.getOrElse(key, List()) })
         index
     }
