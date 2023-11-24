@@ -1,30 +1,27 @@
 import shapeless.{HList, Witness, ::, HNil}
-import shapeless.labelled.{field}
 
-import pridwen.models.{Graph, IsValidGraph, GetNodes, Model, Relation}
+import pridwen.models._
 import pridwen.models.aux.{SelectField, AddField}
-import pridwen.support.functions.{get, getFieldValue}
 
 import org.gephi.project.api.{ProjectController, Workspace}
 import org.gephi.graph.api.{GraphController, GraphModel, DirectedGraph}
-import org.gephi.statistics.plugin.{Modularity}
+import org.gephi.statistics.plugin.Modularity
 import org.openide.util.Lookup
 
-import scala.collection.mutable.{Map, HashSet}
-import scala.collection.parallel.mutable.{ParHashMap}
+import scala.collection.mutable.Map
 
-object community_detection {
-    def louvain[Schema, SourceID, DestID, SourceSchema <: HList, DestSchema <: HList, EdgeSchema <: HList, Out0 <: HList, New_Schema <: HList](
-        graph_in: Graph[Schema, SourceID, DestID], 
+object community {
+    def detect_with_louvain [SourceSchema <: HList, DestSchema <: HList, EdgeSchema <: HList, Out0 <: HList, New_Schema <: HList](
+        graph_in: Graph, 
         weight_att: Witness,
         comm_att: Witness
     )(
         implicit
-        select_sourceID: SelectField[graph_in.Repr, Witness.`'source`.T :: SourceID :: HNil],
-        select_destID: SelectField[graph_in.Repr, Witness.`'dest`.T :: DestID :: HNil],
-        select_weight: SelectField.Aux[graph_in.Repr, Witness.`'edge`.T :: weight_att.T :: HNil, weight_att.T, Int],
-        addTo_source: AddField.Aux[graph_in.Repr, Witness.`'source`.T :: HNil, comm_att.T, Int, Out0],
-        addTo_dest: AddField.Aux[Out0, Witness.`'dest`.T :: HNil, comm_att.T, Int, New_Schema],
+        select_sourceID: SelectField[graph_in.Schema, Graph.SourceName :: graph_in.SourceID :: HNil],
+        select_destID: SelectField[graph_in.Schema, Graph.DestName :: graph_in.DestID :: HNil],
+        select_weight: SelectField.Aux[graph_in.Schema, Graph.EdgeName :: weight_att.T :: HNil, weight_att.T, Int],
+        addTo_source: AddField.Aux[graph_in.Schema, Graph.SourceName :: HNil, comm_att.T, Int, Out0],
+        addTo_dest: AddField.Aux[Out0, Graph.DestName :: HNil, comm_att.T, Int, New_Schema],
     ): List[New_Schema] = {
 
         // Init Gephi Toolkit
@@ -58,64 +55,30 @@ object community_detection {
         graph_in.data.map(hlist => addTo_dest(addTo_source(hlist, community_map(select_sourceID(hlist).toString)), community_map(select_destID(hlist).toString)))
     } 
 
-    def only_keep_significant [
-        S, SourceID, DestID, SComm, DComm, CType, IDType
-    ](
-        graph: Graph[S, SourceID, DestID], 
+    def keep_significant [SComm, DComm, CType, IDType](
+        graph: Graph, 
         community_att: Witness
     )(
         implicit
-        source_id: SelectField.Aux[graph.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, IDType],
-        dest_id: SelectField.Aux[graph.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, IDType],
-        source_community: SelectField.Aux[graph.Repr, Witness.`'source`.T :: community_att.T :: HNil, SComm, CType],
-        dest_community: SelectField.Aux[graph.Repr, Witness.`'dest`.T :: community_att.T :: HNil, DComm, CType],
-        res_model: IsValidGraph[graph.Repr, SourceID, DestID]
-    ): Graph.Aux[graph.Repr, SourceID, DestID, res_model.Repr] = {
-        var nb_edges = 0
-        val community_sizes: Map[CType, HashSet[IDType]] = Map() 
-
-        graph.data.foreach(edge => { nb_edges += 1 ; 
-            val scomm = source_community(edge) ; val dcomm = dest_community(edge) 
-            community_sizes(scomm) = community_sizes.getOrElse(scomm, HashSet()) + source_id(edge) 
-            community_sizes(dcomm) = community_sizes.getOrElse(dcomm, HashSet()) + dest_id(edge) 
-        })
-
-        val resolution_limit = java.lang.Math.sqrt(2*nb_edges)
-        res_model(graph.data.filter(hlist => 
-            (community_sizes(source_community(hlist)).size > resolution_limit) && 
-            (community_sizes(dest_community(hlist)).size > resolution_limit)
-        ))
-    }
-
-    def only_keep_significant2 [
-        S, SourceID, DestID, SComm, DComm, CType, IDType, NRepr <: HList
-    ](
-        graph: Graph[S, SourceID, DestID], 
-        community_att: Witness
-    )(
-        implicit
-        get_nodes: GetNodes.Aux[graph.Repr, Model.Relation, Relation.Aux[NRepr, NRepr]],
-        get_community: SelectField.Aux[NRepr, community_att.T :: HNil, community_att.T, CType],
-        source_community: SelectField.Aux[graph.Repr, Witness.`'source`.T :: community_att.T :: HNil, community_att.T, CType],
-        dest_community: SelectField.Aux[graph.Repr, Witness.`'dest`.T :: community_att.T :: HNil, community_att.T, CType],
-        res_model: IsValidGraph[graph.Repr, SourceID, DestID]
-    ): Graph.Aux[graph.Repr, SourceID, DestID, res_model.Repr] = {
+        same_schema: graph.SourceSchema =:= graph.DestSchema,
+        get_community: SelectField.Aux[graph.SourceSchema, community_att.T :: HNil, community_att.T, CType],
+        source_community: SelectField.Aux[graph.Schema, Graph.SourceName :: community_att.T :: HNil, community_att.T, CType],
+        dest_community: SelectField.Aux[graph.Schema, Graph.DestName :: community_att.T :: HNil, community_att.T, CType],
+        new_dataset: Graph.ValidSchema[graph.Schema, graph.SourceID, graph.DestID]
+    ): new_dataset.T = {
         import scala.collection.parallel.CollectionConverters._
 
         val community_sizes: Map[CType, Int] = Map() 
         
         println("Tailles communautés")
-        time { get_nodes(graph.data).data.foreach(node => { 
+        time { graph.nodes(same_schema).asList.foreach(node => { 
             val comm = get_community(node)
             community_sizes(comm) = community_sizes.getOrElse(comm, 0) + 1
         }) }        
 
-        //println("Afficher communautés significatives")
-        //time { println(community_sizes.filter { case (key,value) => value > java.lang.Math.sqrt(2*graph.data.size) }) }
-
         println("Création nouveau graphe significatif")
         val resolution_limit = java.lang.Math.sqrt(2*graph.data.size)
-        time { res_model(time { graph.data.par.filter(hlist => 
+        time { new_dataset(time { graph.data.par.filter(hlist => 
             (community_sizes(source_community(hlist)) > resolution_limit) && 
             (community_sizes(dest_community(hlist)) > resolution_limit)
         ).toList }) }
@@ -127,12 +90,12 @@ object community_detection {
     // Fonctions de test
     def get_community(node_id: Long): String = node_id match { case 1268486802949767200L => "C1" ; case 277430850L => "C1" ; case 1268486302459767200L => "C3" }
 
-    def community_from_file[S, SourceID, DestID, Out0 <: HList, New_Schema <: HList, NodeID](graph: Graph[S, SourceID, DestID])(
+    def community_from_file[Out0 <: HList, New_Schema <: HList, NodeID](graph: Graph)(
         implicit
-        select_sourceID: SelectField.Aux[graph.Repr, Witness.`'source`.T :: SourceID :: HNil, SourceID, Double],
-        select_destID: SelectField.Aux[graph.Repr, Witness.`'dest`.T :: DestID :: HNil, DestID, Double],
-        addTo_source: AddField.Aux[graph.Repr, Witness.`'source`.T :: HNil, Witness.`'community`.T, Int, Out0],
-        addTo_dest: AddField.Aux[Out0, Witness.`'dest`.T :: HNil, Witness.`'community`.T, Int, New_Schema]
+        select_sourceID: SelectField.Aux[graph.Schema, Graph.SourceName :: graph.SourceID :: HNil, graph.SourceID, Double],
+        select_destID: SelectField.Aux[graph.Schema, Graph.DestName :: graph.DestID :: HNil, graph.DestID, Double],
+        addTo_source: AddField.Aux[graph.Schema, Graph.SourceName :: HNil, Witness.`'community`.T, Int, Out0],
+        addTo_dest: AddField.Aux[Out0, Graph.DestName :: HNil, Witness.`'community`.T, Int, New_Schema]
     ): List[New_Schema] = {
         import scala.collection.parallel.CollectionConverters._
 

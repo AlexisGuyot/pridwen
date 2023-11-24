@@ -11,17 +11,17 @@ import pridwen.models.aux.{PrintSchema}
 
 
 object display {
-    def show_dataset[M <: Model[_]](
+    def show_dataset[M <: Model](
         dataset: M, 
         name: String
     )(
         implicit
-        schema: PrintSchema[dataset.Repr]
+        schema: PrintSchema[dataset.Schema]
     ): Unit = {
         val m: String = dataset match {
-            case _: pridwen.models.Relation[_] => "Relation"
-            case _: pridwen.models.JSON[_] => "JSON"
-            case _: pridwen.models.Graph[_,_,_] => "Graph"
+            case _: pridwen.models.Relation => "Relation"
+            case _: pridwen.models.JSON => "JSON"
+            case _: pridwen.models.Graph => "Graph"
             case _ => "Model"
         }
         println(s"============= ${name}\n")

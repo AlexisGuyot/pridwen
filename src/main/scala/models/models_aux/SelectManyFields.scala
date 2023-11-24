@@ -3,17 +3,13 @@ package pridwen.models.aux
 import shapeless.{HList, ::, HNil}
 import shapeless.labelled.{FieldType => Field}
 
-
-
 trait SelectManyFields[Schema <: HList, Paths_To_Fields <: HList] { type Out <: HList ; def apply(schema: Schema): Out }
 object SelectManyFields {
     type Aux[Schema <: HList, Paths_To_Fields <: HList, New_Schema <: HList] = SelectManyFields[Schema, Paths_To_Fields] { type Out = New_Schema }
-    def apply[Schema <: HList, Paths_To_Fields <: HList](implicit ok: SelectManyFields[Schema, Paths_To_Fields]): Aux[Schema, Paths_To_Fields, ok.Out] = ok
 
     protected def inhabit_Type[Schema <: HList, Paths_To_Fields <: HList, New_Schema <: HList](
         f: Schema => New_Schema
-    ): Aux[Schema, Paths_To_Fields, New_Schema] 
-        = new SelectManyFields[Schema, Paths_To_Fields] { type Out = New_Schema ; def apply(schema: Schema) = f(schema) }
+    ): Aux[Schema, Paths_To_Fields, New_Schema] = new SelectManyFields[Schema, Paths_To_Fields] { type Out = New_Schema ; def apply(schema: Schema) = f(schema) }
 
     implicit def there_is_at_least_one_path [
         Schema <: HList, Path, OtherPaths <: HList, 

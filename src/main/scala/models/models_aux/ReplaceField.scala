@@ -1,23 +1,20 @@
 package pridwen.models.aux
 
 import shapeless.{HList, HNil, ::, Lazy}
-import shapeless.ops.hlist.{Replacer}
+import shapeless.ops.hlist.Replacer
 import shapeless.labelled.{FieldType => Field, field}
 
-import pridwen.support.{RSelector}
-
-
+import pridwen.support.RSelector
 
 trait ReplaceField[Schema <: HList, Pathath <: HList, New_Name, New_Type] { type Out <: HList ; def apply(schema: Schema, value: New_Type): Out }
-trait LowPathriorityReplaceField {
+trait LowPriorityReplaceField {
     type Aux[Schema <: HList, Pathath <: HList, New_Name, New_Type, New_Schema <: HList] = ReplaceField[Schema, Pathath, New_Name, New_Type] { type Out = New_Schema }
 
     protected def inhabit_Type[Schema <: HList, Path <: HList, New_Name, New_Type, New_Schema <: HList](
         f: (Schema, New_Type) => New_Schema
-    ): Aux[Schema, Path, New_Name, New_Type, New_Schema] 
-        = new ReplaceField[Schema, Path, New_Name, New_Type] { 
-            type Out = New_Schema 
-            def apply(schema: Schema, value: New_Type) = f(schema, value) 
+    ): Aux[Schema, Path, New_Name, New_Type, New_Schema] = new ReplaceField[Schema, Path, New_Name, New_Type] { 
+        type Out = New_Schema 
+        def apply(schema: Schema, value: New_Type) = f(schema, value) 
     }
 
     implicit def schema_is_nested [
@@ -44,9 +41,7 @@ trait LowPathriorityReplaceField {
         (schema: Schema, value: New_Type) => update_schema(schema, field[New_Name](value))._2
     )
 }
-object ReplaceField extends LowPathriorityReplaceField {
-    def apply[Schema <: HList, Path <: HList, New_Name, New_Type](implicit ok: ReplaceField[Schema, Path, New_Name, New_Type]): Aux[Schema, Path, New_Name, New_Type, ok.Out] = ok
-
+object ReplaceField extends LowPriorityReplaceField {
     implicit def no_new_name [
         Schema <: HList, Path <: HList, New_Type,
         FName, FType, New_Schema <: HList

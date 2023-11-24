@@ -1,48 +1,43 @@
 package pridwen.models
 
-import shapeless.{HList, HNil, ::, Witness}
-import shapeless.labelled.{FieldType => Field, field}
-
-import pridwen.models.aux.{SelectField}
-
-import scala.collection.mutable.Map
+import shapeless.{HList, Witness}
 
 import scala.collection.parallel.CollectionConverters._
 
-abstract class Model[Schema](dataset: List[Schema]) { 
-    type Repr <: HList 
-    def toRepr(schema: Schema): Repr 
+trait Model { 
+    type Schema <: HList 
+    val data: List[Schema]
 
-    val data: List[Repr] = dataset.par.map(schema => toRepr(schema)).toList
-
-    def get[Path, FieldName, FieldType](
-        path: Path, 
-        filter: Repr => Boolean = (_ => true)
-    )(
-        implicit 
-        select_field: SelectField.Aux[Repr, Path, FieldName, FieldType]
-    ): List[Field[FieldName,FieldType]] = { 
-        val result = scala.collection.mutable.ListBuffer.empty[Field[FieldName,FieldType]] 
-        data.foreach(repr => if(filter(repr)) select_field(repr) +=: result)
-        result.to(List) 
-    }
-
-    def index[Path_To_Key, KName, KType](path_to_key: Path_To_Key)(
-        implicit
-        select_key: SelectField.Aux[Repr, Path_To_Key, KName, KType]
-    ): Map[KType, List[Repr]] = {
-        var index: Map[KType, List[Repr]] = Map()
-        data.foreach(hlist => { val key = select_key(hlist) ; index(key) = hlist :: index.getOrElse(key, List()) })
-        index
-    }
+    protected def convert_to_repr[InputSchema, Repr <: HList](dataset: List[InputSchema], toRepr: InputSchema => Repr): List[Repr] = dataset.par.map(schema => toRepr(schema)).toList
 }
-object Model {
-    type JSON = pridwen.models.JSON[HNil]
-    type Relation = pridwen.models.Relation[HNil]
-    type Graph[SourceID, DestID] = pridwen.models.Graph[HNil, SourceID, DestID]
 
-    // Dummy model instances with empty schemas
-    def JSON(implicit json: IsValidJSON[HNil]) = json(List(HNil))
-    def Relation(implicit relation: IsValidRelation[HNil]) = relation(List(HNil))
-    def Graph(source_id: Witness, dest_id: Witness)(implicit graph: IsValidGraph[(Field[source_id.T, Int] :: HNil) :: (Field[dest_id.T, Int] :: HNil) :: HNil, source_id.T, dest_id.T]) = graph(List((field[source_id.T](0)::HNil) :: (field[dest_id.T](0)::HNil) :: HNil))
+object Model {
+    trait As[S, M <: Model] { type T ; def apply(dataset: List[S]): T }
+    object As {
+        type Aux[S, M <: Model, T0] = As[S, M] { type T = T0 }
+        
+        private def inhabit_Type[S, M <: Model, T0](
+            f: List[S] => T0
+        ): Aux[S, M, T0] = new As[S, M] {
+            type T = T0
+            def apply(dataset: List[S]): T = f(dataset)
+        }
+
+        implicit def as_json[S](
+            implicit
+            json: JSON.ValidSchema[S]
+        ) = inhabit_Type[S, JSON, json.T]((dataset: List[S]) => json(dataset))
+
+        implicit def as_relation[S](
+            implicit
+            relation: Relation.ValidSchema[S]
+        ) = inhabit_Type[S, Relation, relation.T]((dataset: List[S]) => relation(dataset))
+
+        implicit def as_graph[S, Schema <: HList, SourceID, DestID, SourceSchema <: HList, DestSchema <: HList](
+            implicit
+            graph: Graph.ValidSchema[S, SourceID, DestID]
+        ) = inhabit_Type[S, Graph.Aux[Schema, SourceID, DestID, SourceSchema, DestSchema], graph.T](
+            (dataset: List[S]) => graph(dataset)
+        )
+    }
 }

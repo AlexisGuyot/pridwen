@@ -2,7 +2,6 @@ import shapeless.{HList, ::, HNil, Witness => W}
 import shapeless.labelled.{FieldType => Field, field}
 import pridwen.models._
 import pridwen.models.aux.{As}
-import pridwen.models.aux.transformations.{Add, Update}
 import pridwen.support.display._
 import pridwen.support.functions.{get}
 import pridwen.operators.construct._
@@ -14,8 +13,7 @@ import scala.collection.mutable.{ListBuffer, Map}
 import time._
 
 object Main extends App {  
-
-    //println(new breeze.linalg.CSCMatrix[Int](Array(1,2,3,4,5,6), 3, 3, Array(0,2,3,6), Array(0,2,2,0,1,2)).toDenseMatrix)
+    //data.toy_example
 
     // =============== Construction du workflow
 
@@ -35,31 +33,31 @@ object Main extends App {
         input_dataset1, 
         W('user) :: W('id) :: HNil, 
         W('retweeted_status) :: W('user) :: W('id) :: HNil
-    ) }
+    ).apply }
 
-    println(s"|V| = ${graph_rt.nodes[Model.Relation].data.size} ; |E| = ${graph_rt.data.size}")
+    println(s"|V| = ${graph_rt.nodes.asList.size} ; |E| = ${graph_rt.data.size}")
     show_dataset(graph_rt, "Graph of Retweets")
 
     // Step 2: Détection des communautés dans le graphe des retweets
     println("Détection communautés")
     var graph_rt_with_communities = time { 
-        if(!csdata) transform(graph_rt)((dataset: graph_rt.type) => community_detection.louvain(dataset, W('weight), W('community))) 
-        else transform(graph_rt)((dataset: graph_rt.type) => community_detection.community_from_file(dataset))
+        if(!csdata) transform(graph_rt)((dataset: graph_rt.type) => community.detect_with_louvain(dataset, W('weight), W('community))).apply
+        else transform(graph_rt)((dataset: graph_rt.type) => community.community_from_file(dataset)).apply
     }
 
-    println(s"|V| = ${graph_rt.nodes[Model.Relation].data.size} ; |E| = ${graph_rt.data.size}")
+    println(s"|V| = ${graph_rt.nodes.asList.size} ; |E| = ${graph_rt.data.size}")
     show_dataset(graph_rt_with_communities, "Graph of Retweets (with communities)")
 
     // Step 3: Suppression des sommets n'appartenant pas à une communauté significative
     println("Suppression communautés non-significatives")
-    graph_rt_with_communities = time { community_detection.only_keep_significant2(graph_rt_with_communities, W('community)) }
+    graph_rt_with_communities = time { community.keep_significant(graph_rt_with_communities, W('community)) }
 
-    println(s"|V| = ${graph_rt_with_communities.nodes[Model.Relation].data.size} ; |E| = ${graph_rt_with_communities.data.size}")
+    println(s"|V| = ${graph_rt_with_communities.nodes.asList.size} ; |E| = ${graph_rt_with_communities.data.size}")
     show_dataset(graph_rt_with_communities, "Graph of Retweets (only significant communities)")
 
     // Step 4: Récupération des sommets du graphe des retweets
     println("Récupération sommets retweets")
-    val graph_rt_nodes = time { graph_rt_with_communities.nodes[Model.Relation] }
+    val graph_rt_nodes = time { graph_rt_with_communities.nodes.as[Relation] }
 
     println(s"|rows| = ${graph_rt_nodes.data.size}")
     show_dataset(graph_rt_nodes, "Graph of Retweets Nodes")
@@ -70,14 +68,14 @@ object Main extends App {
         input_dataset2, 
         W('user) :: W('id) :: HNil, 
         W('quoted_status) :: W('user) :: W('id) :: HNil
-    ) }
+    ).apply }
 
-    println(s"|V| = ${graph_quotes.nodes[Model.Relation].data.size} ; |E| = ${graph_quotes.data.size}")
+    println(s"|V| = ${graph_quotes.nodes.asList.size} ; |E| = ${graph_quotes.data.size}")
     show_dataset(graph_quotes, "Graph of Quotes")
 
     // Step 6: Jointure des deux graphes (seuls les sommets en commun sont conservés (inner), les sommets du graphe résultat récupèrent l'attribut de communauté)
     println("Jointures")
-    val joined_graph = time { community_detection.only_keep_significant2(
+    val joined_graph = time { community.keep_significant(
                             time { join_in_right(graph_rt_nodes, 
                             time { join_in_right(graph_rt_nodes, graph_quotes,
                                 W('id) :: HNil,
@@ -87,7 +85,7 @@ object Main extends App {
                                 W('dest) :: W('id) :: HNil
                             )}, W('community)) }
 
-    println(s"|V| = ${joined_graph.nodes[Model.Relation].data.size} ; |E| = ${joined_graph.data.size}")
+    println(s"|V| = ${joined_graph.nodes.asList.size} ; |E| = ${joined_graph.data.size}")
     show_dataset(joined_graph, "Joined Graph (Quote-RT)")
 
 
@@ -109,9 +107,6 @@ object Main extends App {
     println(s"${adj_matrix.rows}x${adj_matrix.cols}")
     println(s"${comm_matrix.rows}x${comm_matrix.cols}")
 
-    //breeze.linalg.csvwrite(new java.io.File("/home/alexis/Documents/Tweets/GMerged/ma.txt"), breeze.linalg.convert(adj_matrix, Double))
-    //breeze.linalg.csvwrite(new java.io.File("/home/alexis/Documents/Tweets/GMerged/mc.txt"), breeze.linalg.convert(comm_matrix, Double))
-
     // Step 9: Calcul de la polarisation
     println("Calcul polarisation")
     val workflow_output = time { polarisation.compute(adj_matrix, comm_matrix) }
@@ -120,19 +115,5 @@ object Main extends App {
     show_dataset_nomodel(workflow_output, "Workflow Output") 
     println()
 
-    data.write_matrices[Double](Array((workflow_output._1, "adj"), (workflow_output._2, "comm")))
-
-    /* var m1 = "" ; var m2 = ""
-    for(i <- 0 to (workflow_output._1.rows-1)) { for(j <- 0 to (workflow_output._1.cols-1)) { m1 += s"${workflow_output._1(i,j)} " ; m2 += s"${workflow_output._1(i,j)} " } ; m1 += "\n" ; m2 += "\n" }
-    os.write.over(os.Path("/home/alexis/Documents/Tweets/GMerged/ant.txt"), m1)
-    os.write.over(os.Path("/home/alexis/Documents/Tweets/GMerged/por.txt"), m2) */
-
-    /* import scala.collection.mutable.Map
-    val lm = Map(0 -> Map(0 -> 1, 1 -> 3, 2 -> 2), 1 -> Map(0 -> 1), 2 -> Map(0 -> 1, 1 -> 2, 2 -> 2))
-    val rm = Map(0 -> Map(2 -> 2), 1 -> Map(0 -> 7, 1 -> 5), 2 -> Map(0 -> 2, 1 -> 1, 2 -> 1))
-    println(polarisation.elwise_product(lm, rm))
-    println(polarisation.product(lm, rm))
-    println()
-
-    println(polarisation.compute(polarisation.adj_toyex, polarisation.comm_toyex)) */
+    data.write_matrices[Double](Array((workflow_output._1, "ant"), (workflow_output._2, "por")))
 }
