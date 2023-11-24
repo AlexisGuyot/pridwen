@@ -35,6 +35,9 @@ object Main extends App {
         W('retweeted_status) :: W('user) :: W('id) :: HNil
     ).apply }
 
+    import pridwen.operators.construct2._
+    //val tmp = construct_from(input_dataset1).a[Graph].construct//.withID(source = W('user) :: W('id) :: HNil, dest = W('retweeted_status) :: W('user) :: W('id) :: HNil).construct
+
     println(s"|V| = ${graph_rt.nodes.asList.size} ; |E| = ${graph_rt.data.size}")
     show_dataset(graph_rt, "Graph of Retweets")
 
