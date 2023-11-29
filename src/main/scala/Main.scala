@@ -29,14 +29,12 @@ object Main extends App {
 
     // Step 1: Construction du graphe des retweets
     println("Construction graphe retweets")
-    val graph_rt = time { constructGraph(
+    /* val graph_rt = time { constructGraph(
         input_dataset1, 
         W('user) :: W('id) :: HNil, 
         W('retweeted_status) :: W('user) :: W('id) :: HNil
-    ).apply }
-
-    import pridwen.operators.construct2._
-    //val tmp = construct_from(input_dataset1).a[Graph].construct//.withID(source = W('user) :: W('id) :: HNil, dest = W('retweeted_status) :: W('user) :: W('id) :: HNil).construct
+    ).apply } */
+    val graph_rt = time { construct_from(input_dataset1).aGraph(W('user) :: W('id) :: HNil, W('retweeted_status) :: W('user) :: W('id) :: HNil).construct }
 
     println(s"|V| = ${graph_rt.nodes.asList.size} ; |E| = ${graph_rt.data.size}")
     show_dataset(graph_rt, "Graph of Retweets")
@@ -67,11 +65,12 @@ object Main extends App {
 
     // Step 5: Construction du graphe des quotes
     println("Construction graphe citations")
-    val graph_quotes = time { constructGraph(
+    /* val graph_quotes = time { constructGraph(
         input_dataset2, 
         W('user) :: W('id) :: HNil, 
         W('quoted_status) :: W('user) :: W('id) :: HNil
-    ).apply }
+    ).apply } */
+    val graph_quotes = time { construct_from(input_dataset2).aGraph(W('user) :: W('id) :: HNil, W('quoted_status) :: W('user) :: W('id) :: HNil).construct }
 
     println(s"|V| = ${graph_quotes.nodes.asList.size} ; |E| = ${graph_quotes.data.size}")
     show_dataset(graph_quotes, "Graph of Quotes")

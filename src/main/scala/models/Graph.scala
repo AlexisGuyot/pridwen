@@ -29,6 +29,7 @@ object Graph {
     type SourceName = Witness.`'source`.T ; type DestName = Witness.`'dest`.T ; type EdgeName = Witness.`'edge`.T
 
     type Aux[S <: HList, SID, DID, SS <: HList, DS <: HList] = Graph { type Schema = S ; type SourceID = SID ; type DestID = DID ; type SourceSchema = SS ; type DestSchema = DS }
+    type WithID[SID, DID] = Aux[HNil, SID, DID, HNil, HNil]
 
     def apply[Schema, SID, DID](dataset: List[Schema])(implicit isValid: ValidSchema[Schema, SID, DID]): isValid.T = isValid(dataset)
     def apply[Schema](dataset: List[Schema], sourceID: Witness, destID: Witness)(implicit isValid: ValidSchema[Schema, sourceID.T, destID.T]): isValid.T = isValid(dataset)
