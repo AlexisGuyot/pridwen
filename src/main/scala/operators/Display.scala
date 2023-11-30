@@ -1,7 +1,7 @@
 package pridwen.operators
 
 import pridwen.support.{PrintType}
-import pridwen.models.{Model}
+import pridwen.models.{Model, Graph, JSON, Relation}
 import pridwen.schemaop.{PrintSchema}
 
 object display {

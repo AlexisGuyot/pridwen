@@ -54,9 +54,9 @@ object Graph {
                     
                     val data: List[Schema] = convert_to_repr(dataset, toRepr)
 
-                    def nodes(implicit eq: =:=[SourceSchema, DestSchema]): NodeReturn[SourceSchema] = new NodeReturn[SourceSchema](dataset.par.flatMap(schema => List[SourceSchema](toSourceRepr(schema), eq.flip(toDestRepr(schema)))).toList)
-                    def source_nodes: NodeReturn[SourceSchema] = new NodeReturn[SourceSchema](dataset.par.map(schema => toSourceRepr(schema)).toList)
-                    def dest_nodes: NodeReturn[DestSchema] = new NodeReturn[DestSchema](dataset.par.map(schema => toDestRepr(schema)).toList)
+                    def nodes(implicit eq: =:=[SourceSchema, DestSchema]): NodeReturn[SourceSchema] = new NodeReturn[SourceSchema](dataset.par.flatMap(schema => List[SourceSchema](toSourceRepr(schema), eq.flip(toDestRepr(schema)))).distinct.toList)
+                    def source_nodes: NodeReturn[SourceSchema] = new NodeReturn[SourceSchema](dataset.par.map(schema => toSourceRepr(schema)).distinct.toList)
+                    def dest_nodes: NodeReturn[DestSchema] = new NodeReturn[DestSchema](dataset.par.map(schema => toDestRepr(schema)).distinct.toList)
                 }
             }
 
