@@ -5,35 +5,16 @@ import shapeless.labelled.{FieldType => Field, field}
 import shapeless.ops.hlist.{Modifier, Selector => HSelector, Prepend}
 import shapeless.ops.record.{Selector => RSelector}
 
-import pridwen.support.functions.{getFieldValue}
-
-
+import pridwen.support.functions.getFieldValue
 
 // Appends to H1 the elements contained in H2 they are not already in H1 (Distinct Concat). Handles nesting. Output type is the resulting HList.
 trait DConcat[H1 <: HList, H2 <: HList] { type Out <: HList ; def apply(in1: H1, in2: H2): Out }
 object DConcat {
     type Aux[H1 <: HList, H2 <: HList, Concat <: HList] = DConcat[H1, H2] { type Out = Concat }
-    def apply[H1 <: HList, H2 <: HList](implicit ok: DConcat[H1, H2]): Aux[H1, H2, ok.Out] = ok
 
     protected def inhabit_Type[H1 <: HList, H2 <: HList, Concat <: HList](
         f: (H1, H2) => Concat
-    ): Aux[H1, H2, Concat] 
-        = new DConcat[H1, H2] { 
-            type Out = Concat 
-            def apply(in1: H1, in2: H2) = f(in1, in2) 
-    }
-
-    /* implicit def launch_terminal_recursion [
-        T1 <: HList, T2 <: HList, H1 <: HList, H2 <: HList, 
-        Concat <: HList
-    ](
-        implicit
-        to_hlist_in1: ToHList.Aux[T1, H1],
-        to_hlist_in2: ToHList.Aux[T2, H2],
-        concat: DConcat_TR.Aux[H1, H2, Concat]
-    ) = inhabit_Type[T1, T2, Concat](
-        (in1: T1, in2: T2) => concat(to_hlist_in1(in1), to_hlist_in2(in2))
-    ) */
+    ): Aux[H1, H2, Concat] = new DConcat[H1, H2] { type Out = Concat ; def apply(in1: H1, in2: H2) = f(in1, in2) }
 
     implicit def launch_terminal_recursion [
         H1 <: HList, H2 <: HList, 

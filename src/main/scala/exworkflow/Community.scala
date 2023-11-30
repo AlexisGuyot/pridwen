@@ -88,8 +88,6 @@ object community {
 
 
     // Fonctions de test
-    def get_community(node_id: Long): String = node_id match { case 1268486802949767200L => "C1" ; case 277430850L => "C1" ; case 1268486302459767200L => "C3" }
-
     def community_from_file[Out0 <: HList, New_Schema <: HList, NodeID](graph: Graph)(
         implicit
         select_sourceID: SelectField.Aux[graph.Schema, Graph.SourceName :: graph.SourceID :: HNil, graph.SourceID, Double],

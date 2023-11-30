@@ -2,8 +2,8 @@ import shapeless.{HList, ::, HNil, Witness => W}
 import shapeless.labelled.{FieldType => Field, field}
 import pridwen.models._
 import pridwen.models.aux.{As}
-import pridwen.support.display._
 import pridwen.support.functions.{get}
+import pridwen.operators.display._
 import pridwen.operators.construct._
 import pridwen.operators.join._
 import pridwen.operators.transform._

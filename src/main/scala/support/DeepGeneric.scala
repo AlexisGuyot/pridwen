@@ -3,8 +3,6 @@ package pridwen.support
 import shapeless.{HList, HNil, ::, LabelledGeneric, Lazy}
 import shapeless.labelled.{FieldType => Field, field}
 
-
-
 trait DeepGeneric[T] extends Serializable { 
     type Repr <: HList
     def to(t: T): Repr
@@ -37,8 +35,6 @@ trait LowPriorityDeepGeneric {
     )
 }
 object DeepGeneric extends LowPriorityDeepGeneric {
-    def apply[T](implicit ok: DeepGeneric[T]): Aux[T, ok.Repr] = ok
-
     implicit def t_is_a_case_class [
         T, ReprT, 
         Repr0 <: HList
