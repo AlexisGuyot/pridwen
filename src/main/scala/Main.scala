@@ -16,13 +16,13 @@ object Main extends App {
     case class TweetsRT(user: User, retweeted_status: RetweetedStatus) ; case class TweetsQuotes(user: User, quoted_status: QuotedStatus)
 
     println("Input data")
-    val (input_dataset1, input_dataset2) = time { val (data_rt, data_q) = data.load_json("GMerged", "cs.json") ; println("Création JSON") ; (time { JSON[TweetsRT](data_rt) }, time { JSON[TweetsQuotes](data_q) }) }
+    val (input_dataset_rt, input_dataset_q) = time { val (data_rt, data_q) = data.load_json("GMerged", "cs.json") ; println("Création JSON") ; (time { JSON[TweetsRT](data_rt) }, time { JSON[TweetsQuotes](data_q) }) }
 
     // =============== Construction du workflow
 
     // Step 1: Construction du graphe des retweets
     println("Construction graphe retweets")
-    val graph_rt = time { construct_from(input_dataset1).aGraph(W('user) :: W('id) :: HNil, W('retweeted_status) :: W('user) :: W('id) :: HNil).construct }
+    val graph_rt = time { construct_from(input_dataset_rt).aGraph(W('user) :: W('id) :: HNil, W('retweeted_status) :: W('user) :: W('id) :: HNil).construct }
 
     show_dataset(graph_rt, "Graph of Retweets")
     println(s"|V| = ${graph_rt.nodes.asList.size} ; |E| = ${graph_rt.data.size}")
@@ -53,7 +53,7 @@ object Main extends App {
 
     // Step 5: Construction du graphe des quotes
     println("Construction graphe citations")
-    val graph_quotes = time { construct_from(input_dataset2).aGraph(W('user) :: W('id) :: HNil, W('quoted_status) :: W('user) :: W('id) :: HNil).construct }
+    val graph_quotes = time { construct_from(input_dataset_q).aGraph(W('user) :: W('id) :: HNil, W('quoted_status) :: W('user) :: W('id) :: HNil).construct }
 
     show_dataset(graph_quotes, "Graph of Quotes")
     println(s"|V| = ${graph_quotes.nodes.asList.size} ; |E| = ${graph_quotes.data.size}")
