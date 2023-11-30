@@ -1,7 +1,7 @@
 package pridwen.operators
 
 import pridwen.models._
-import pridwen.models.aux.{SelectField, SelectManyFields}
+import pridwen.schemaop.{SelectField, SelectManyFields}
 
 import shapeless.{HList, HNil, ::, Witness => W}
 import shapeless.labelled.{FieldType => Field, field}

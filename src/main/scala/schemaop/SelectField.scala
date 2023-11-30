@@ -1,4 +1,4 @@
-package pridwen.models.aux
+package pridwen.schemaop
 
 import shapeless.{HList, HNil, ::, Witness, Lazy}
 import shapeless.labelled.{FieldType => Field, field}

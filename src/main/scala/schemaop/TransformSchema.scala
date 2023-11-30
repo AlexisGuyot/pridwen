@@ -1,4 +1,4 @@
-package pridwen.models.aux 
+package pridwen.schemaop
 
 import shapeless.{HList, HNil, ::, Witness}
 

@@ -1,5 +1,5 @@
 import pridwen.models.Graph
-import pridwen.models.aux.SelectField
+import pridwen.schemaop.SelectField
 
 import shapeless.{Witness, ::, HNil}
 

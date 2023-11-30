@@ -2,7 +2,7 @@ package pridwen.operators
 
 import pridwen.support.{PrintType}
 import pridwen.models.{Model}
-import pridwen.models.aux.{PrintSchema}
+import pridwen.schemaop.{PrintSchema}
 
 object display {
     def show_dataset[M <: Model](

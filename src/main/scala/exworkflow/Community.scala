@@ -1,7 +1,7 @@
 import shapeless.{HList, Witness, ::, HNil}
 
 import pridwen.models._
-import pridwen.models.aux.{SelectField, AddField}
+import pridwen.schemaop.{SelectField, AddField}
 
 import org.gephi.project.api.{ProjectController, Workspace}
 import org.gephi.graph.api.{GraphController, GraphModel, DirectedGraph}

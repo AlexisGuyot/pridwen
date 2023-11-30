@@ -3,7 +3,7 @@ package pridwen.operators
 import shapeless.{HList, HNil}
 
 import pridwen.models._
-import pridwen.models.aux.{TransformSchema}
+import pridwen.schemaop.{TransformSchema}
 
 object transform {
     def transform[ModelIn <: Model, Transfo <: HList, New_Schema <: HList, Out](

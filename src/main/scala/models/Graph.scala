@@ -8,7 +8,7 @@ import scala.collection.parallel.CollectionConverters._
 
 import pridwen.support.{DeepGeneric}
 import pridwen.support.functions.{getFieldValue}
-import pridwen.models.aux.{SelectField}
+import pridwen.schemaop.{SelectField}
 
 trait Graph extends Model { 
     type SourceID ; type DestID 

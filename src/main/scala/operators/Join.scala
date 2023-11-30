@@ -4,7 +4,7 @@ import shapeless.{HList, HNil, Witness}
 
 import pridwen.support.functions.{getFieldValue}
 import pridwen.models._
-import pridwen.models.aux.{JoinSchema, JoinMode, Index}
+import pridwen.schemaop.{JoinSchema, JoinMode, Index}
 
 import scala.collection.mutable.{Map}
 
