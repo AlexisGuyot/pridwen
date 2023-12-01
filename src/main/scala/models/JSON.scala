@@ -5,6 +5,8 @@ import shapeless.labelled.{FieldType => Field}
 
 import java.time.{LocalDate => Date}
 
+import scala.annotation.implicitNotFound
+
 import pridwen.support.DeepGeneric
 
 trait JSON extends Model
@@ -13,6 +15,7 @@ object JSON {
     
     def apply[Schema](dataset: List[Schema])(implicit isValid: ValidSchema[Schema]): isValid.T = isValid(dataset)
 
+    @implicitNotFound("[pridwen] ${S} is not a valid schema for JSON data.")
     trait ValidSchema[S] { type T ; def apply(dataset: List[S]): T }
     object ValidSchema {
         type Aux[S, T0] = ValidSchema[S] { type T = T0 }
@@ -47,9 +50,9 @@ object JSON {
 
         // ========================= Valid value types for this model
 
-        private trait JType[T]
+        @implicitNotFound("[pridwen] ${T} is not a valid type for JSON values.")
+        protected trait JType[T]
         private object JType {
-            def apply[T](implicit ok: JType[T]): JType[T] = ok
             private def inhabit_JType[T]: JType[T] = new JType[T] {}
 
             implicit def json_string = inhabit_JType[String]

@@ -48,7 +48,6 @@ object Relation {
 
         private trait RType[T]
         private object RType {
-            def apply[T](implicit ok: RType[T]): RType[T] = ok
             private def inhabit_RType[T]: RType[T] = new RType[T] {}
 
             implicit def rel_string = inhabit_RType[String]

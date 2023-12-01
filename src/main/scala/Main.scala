@@ -9,6 +9,9 @@ import shapeless.{::, HNil, Witness => W}
 import time._
 
 object Main extends App {  
+    //import shapeless.labelled.{FieldType => Field, field}
+    //val test = JSON[Field[W.`'truc`.T, Float] :: HNil](List(field[W.`'truc`.T](1.5f) :: HNil))
+
     // =============== Chargement des données
 
     case class User(id: Double)
