@@ -14,17 +14,17 @@ import scala.collection.parallel.CollectionConverters._
 object community {
     /**
     * Detects communities in a graph with the Louvain method (https://en.wikipedia.org/wiki/Louvain_method).
-    * @tparam NewSchema1 [Inferred] The new schema obtained after adding the community attribute to the source vertices of the graph
-    * @tparam NewSchema2 [Inferred] The new schema obtained after adding the community attribute to the destination vertices of the graph
-    * @param graph The graph in which communities should be detected
-    * @param weight_att The name of the weight attribute in this graph
-    * @param comm_att The name that should be given to the new community attribute in the graph vertices
-    * @param select_sourceID [Implicit] If exists, provides a function (apply) for selecting the source vertex ID in the graph data
-    * @param select_destID [Implicit] If exists, provides a function (apply) for selecting the destination vertex ID in the graph data
-    * @param select_weight [Implicit] If exists, provides a function (apply) for selecting the edge weight in the graph data
-    * @param addTo_source [Implicit] If exists, provides a function (apply) for adding a new community attribute in the source vertex attributes
-    * @param addTo_dest [Implicit] If exists, provides a function (apply) for adding a new community attribute in the destination vertex attributes
-    * @return a new unmodeled dataset with the same schema as the input graph + the new community attributes
+    * @tparam NewSchema1 [Inferred] The new schema obtained after adding the community attribute to the source vertices of the graph.
+    * @tparam NewSchema2 [Inferred] The new schema obtained after adding the community attribute to the destination vertices of the graph.
+    * @param graph The graph in which communities should be detected.
+    * @param weight_att The name of the weight attribute in this graph.
+    * @param comm_att The name that should be given to the new community attribute in the graph vertices.
+    * @param select_sourceID [Implicit] If exists, provides a function (apply) for selecting the source vertex ID in the graph data.
+    * @param select_destID [Implicit] If exists, provides a function (apply) for selecting the destination vertex ID in the graph data.
+    * @param select_weight [Implicit] If exists, provides a function (apply) for selecting the edge weight in the graph data.
+    * @param addTo_source [Implicit] If exists, provides a function (apply) for adding a new community attribute in the source vertex attributes.
+    * @param addTo_dest [Implicit] If exists, provides a function (apply) for adding a new community attribute in the destination vertex attributes.
+    * @return a new unmodeled dataset with the same schema as the input graph + the new community attributes.
     */
     def detect_with_louvain [NewSchema1 <: HList, NewSchema2 <: HList](
         graph: Graph, 
@@ -67,15 +67,15 @@ object community {
     } 
 
     /**
-    * Removes all the vertices that are not included in the significant communities of a graph
-    * @tparam CommunityType [Inferred] The type of the community attribute in the vertices schema
-    * @param graph The graph in which vertices should be removed if they are not part of a significant community
-    * @param community_att The name of the community attribute in this graph
-    * @param same_schema [Implicit] If exists, all the vertices of this graph share the same schema. Provides a way to cast data of type SourceSchema into data of type DestSchema (and vice versa)
-    * @param select_community [Implicit] If exists, provides a function (apply) for selecting the community attribute in the list of nodes of the graph
-    * @param select_source_community [Implicit] If exists, provides a function (apply) for selecting the community attribute in the graph data
-    * @param select_dest_community [Implicit] If exists, provides a function (apply) for selecting the community attribute in the graph data
-    * @param new_dataset [Implicit] If exists, provides a function (apply) for modelling data as a graph with the same schema, source ID and destination ID as the input one
+    * Removes all the vertices that are not included in the significant communities of a graph.
+    * @tparam CommunityType [Inferred] The type of the community attribute in the vertices schema (should be the same in source and destination vertices).
+    * @param graph The graph in which vertices should be removed if they are not part of a significant community.
+    * @param community_att The name of the community attribute in this graph.
+    * @param same_schema [Implicit] If exists, all the vertices of this graph share the same schema. Provides a way to cast data of type SourceSchema into data of type DestSchema (and vice versa).
+    * @param select_community [Implicit] If exists, provides a function (apply) for selecting the community attribute in the list of nodes of the graph.
+    * @param select_source_community [Implicit] If exists, provides a function (apply) for selecting the community attribute in the graph data.
+    * @param select_dest_community [Implicit] If exists, provides a function (apply) for selecting the community attribute in the graph data.
+    * @param new_dataset [Implicit] If exists, provides a function (apply) for modelling data as a graph with the same schema, source ID and destination ID as the input one.
     * @return a new graph modelled with the new_dataset parameter
     */
     def keep_significant[CommunityType](
