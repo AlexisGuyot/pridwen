@@ -121,12 +121,14 @@ object community {
     ): List[New_Schema] = {
         println("Chargement XML")
         val g_rt = time { scala.xml.XML.loadFile("/home/alexis/Documents/Tweets/GMerged/g_rt") }
+        //val g_rt = time { scala.xml.XML.loadFile("/home/alexis/Documents/Tweets/GMerged/g_rt4") }
         val nodes: Map[Double, Int] = Map()
         println("Parcours XML")
         time { (g_rt \ "graph" \ "node").foreach(node => nodes((node \ "data").find(d => (d \@ "key") == "v_name").map(_.text).get.toDouble) = (node \ "data").find(d => (d \@ "key") == "v_community").map(_.text).get.toInt) }
 
         println("Création liste arêtes")
         time { graph.data.par.map(hlist => {
+        //time { graph.data.par.filter(hlist => nodes.contains(select_sourceID(hlist)) && nodes.contains(select_destID(hlist))).map(hlist => {
             val sourceID = select_sourceID(hlist) ; val destID = select_destID(hlist)
             addTo_dest(addTo_source(hlist, nodes(sourceID)), nodes(destID))
         }).toList }

@@ -18,6 +18,10 @@ object Main extends App {
     case class RetweetedStatus(user: User) ; case class QuotedStatus(user: User)
     case class TweetsRT(user: User, retweeted_status: RetweetedStatus) ; case class TweetsQuotes(user: User, quoted_status: QuotedStatus)
 
+    //data.toy_example
+    //println(polarisation.compute(data.load_ma("/home/alexis/Documents/Tweets/GMerged/ma.csv"), data.load_mc("/home/alexis/Documents/Tweets/GMerged/mc.csv")))
+    //data.clean_cs_data
+
     println("Input data")
     val (input_dataset_rt, input_dataset_q) = time { val (data_rt, data_q) = data.load_json("GMerged", "cs.json") ; println("Création JSON") ; (time { JSON[TweetsRT](data_rt) }, time { JSON[TweetsQuotes](data_q) }) }
 
@@ -38,7 +42,7 @@ object Main extends App {
     }
 
     show_dataset(graph_rt_with_communities, "Graph of Retweets (with communities)")
-    println(s"|V| = ${graph_rt.nodes.asList.size} ; |E| = ${graph_rt.data.size}")
+    println(s"|V| = ${graph_rt_with_communities.nodes.asList.size} ; |E| = ${graph_rt_with_communities.data.size}")
 
     // Step 3: Suppression des sommets n'appartenant pas à une communauté significative
     println("Suppression communautés non-significatives")

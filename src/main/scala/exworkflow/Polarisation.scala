@@ -22,11 +22,17 @@ object polarisation {
     def compute(adj_matrix: CSCMatrix[Int], comm_matrix: CSCMatrix[Int]) = {
         import scala.language.postfixOps
 
+        //data.write_matrix(adj_matrix, "adj")
+        //data.write_matrix(comm_matrix, "comm")
+
         println("Création de nmc et mct") ; val (nmc, mct) = time { (comm_matrix.map(v => if(v == 0) 1 else 0), comm_matrix.t) }
         println("Calcul md") ; val md = time { adj_matrix * comm_matrix }
         println("Création de i et ni") ; val (i, ni) = time { (md.map(v => if(v == 0) 1 else 0), md.map(v => if(v == 0) 0 else 1)) } // Essayer de passer ni en DenseMatrix
         println("Calcul inmc") ; val inmc = time { i *:* nmc }
         println("Man et Mp vides") ;val (man, mp) = (time { CSCMatrix.zeros[Double](comm_matrix.cols, comm_matrix.cols) }, time { CSCMatrix.zeros[Double](comm_matrix.cols, comm_matrix.cols) })
+
+        //data.write_matrix(md, "md")
+        //data.write_matrix(i, "i")
 
         println("Calcul lignes matrices ant et por")
         time { (0 to (comm_matrix.cols-1) par).foreach( i => {
@@ -38,12 +44,12 @@ object polarisation {
             val mmdsi = time { mdsi.map(v => if(v != 0) 1.0 else 0) }
             val mvani = time { CSCMatrix.tabulate(comm_matrix.rows, comm_matrix.cols){ case(r,c) => if(mdsi(r, c) != 0) if(mdsi(r, c) + md(r, c) != 0) (mdsi(r, c).asInstanceOf[Double] / (mdsi(r, c) + md(r, c))) - 0.5 else 0 else 0 } }
             val tmp_mpi1 = time { mvani.map(v => if(v < 0) 1.0 else 0) }
-            val mbsi = time { sum(mvani.map(v => if(v != 0) 1.0 else 0).toDenseMatrix, Axis._0) }
+            val mbsi = time { sum(mmdsi.toDenseMatrix, Axis._0) } 
             val mcti = time { CSCMatrix.tabulate(1, comm_matrix.rows){ case(r,c) => mct(i,c).asInstanceOf[Double] } }
 
-            println(s"Communauté ${i} : calcul de mani1") ; val mani1 = time { mcti * mvani }
-            println(s"Communauté ${i} : calcul de mani2") ; val mani2 = time { mcti * mmdsi }
-            println(s"Communauté ${i} : calcul de mpi1") ; val mpi1 = time { mcti * tmp_mpi1 }
+            println(s"Communauté ${i} : calcul de mani1") ; val mani1 = time { mcti * mvani }// ; println(mani1.toDenseMatrix)
+            println(s"Communauté ${i} : calcul de mani2") ; val mani2 = time { mcti * mmdsi }// ; println(mani2.toDenseMatrix)
+            println(s"Communauté ${i} : calcul de mpi1") ; val mpi1 = time { mcti * tmp_mpi1 }// ; println(mpi1.toDenseMatrix)
 
             println(s"Communauté ${i} : remplissage de man et mp")
             time { for(j <- 0 to (comm_matrix.cols-1)) {
@@ -70,6 +76,59 @@ object polarisation {
     * @return the adjacency and community matrices, as a pair of sparse matrices.
     */
     def get_matrices[CommunityType, NodeIDType](
+        graph: Graph, 
+        weight_att: Witness, 
+        comm_att: Witness
+    )(
+        implicit
+        select_sourceID: SelectField.Aux[graph.Schema, Graph.SourceName :: graph.SourceID :: HNil, graph.SourceID, NodeIDType],
+        select_destID: SelectField.Aux[graph.Schema, Graph.DestName :: graph.DestID :: HNil, graph.DestID, NodeIDType],
+        select_source_community: SelectField.Aux[graph.Schema, Graph.SourceName :: comm_att.T :: HNil, comm_att.T, CommunityType],
+        select_dest_community: SelectField.Aux[graph.Schema, Graph.DestName :: comm_att.T :: HNil, comm_att.T, CommunityType],
+        select_weight: SelectField.Aux[graph.Schema, Graph.EdgeName :: weight_att.T :: HNil, weight_att.T, Int]
+    ): (CSCMatrix[Int], CSCMatrix[Int]) = {
+        val comm_map: Map[NodeIDType, CommunityType] = Map()            // A map associating each vertex with its community
+        val adj_map: Map[NodeIDType, Map[NodeIDType, Int]] = Map()      // A map associating each vertex with its outcoming edges
+
+        // Fills in the above maps by scanning the graph edges
+        println("Construction hashmaps")
+        time { graph.data.foreach(hlist => {
+            val sid = select_sourceID(hlist) ; val did = select_destID(hlist)
+            val scomm = select_source_community(hlist); val dcomm = select_dest_community(hlist)
+            
+            comm_map(sid) = scomm ; comm_map(did) = dcomm
+
+            adj_map(sid) = adj_map.getOrElse(sid, Map())
+            adj_map(sid)(did) = adj_map(sid).getOrElse(did, 0) + select_weight(hlist)
+            adj_map(did) = adj_map.getOrElse(did, Map())
+        }) }
+
+        // Gets the sets of nodes and communities of the graph
+        //val nodes = adj_map.keys.toIndexedSeq.sortWith((x, y) => f"${x.asInstanceOf[Double]}%.0f" < f"${y.asInstanceOf[Double]}%.0f") ; val nb_nodes = nodes.length 
+        //val nodes = adj_map.keys.toIndexedSeq.sortWith((x, y) => x.asInstanceOf[Double] < y.asInstanceOf[Double]) ; val nb_nodes = nodes.length 
+        val nodes = adj_map.keys.toIndexedSeq ; val nb_nodes = nodes.length 
+        val communities = comm_map.values.groupBy(x => x).toIndexedSeq.sortWith(_._2.size > _._2.size).map(_._1) ; val nb_comm = communities.length
+
+        println(s"Significative communities: ${communities.map(_.asInstanceOf[Int]).mkString(", ")}")
+
+        // Fills a map associating each vertex with its index in the nodes list
+        //val (_, nodeID_to_ind) = time { nodes.sortWith(_.asInstanceOf[Double] < _.asInstanceOf[Double]).foldLeft((0, Map[NodeIDType, Int]())){ case ((i, res), node) => (i+1, res += (node -> i)) } }
+        val nodeID_to_ind = nodes.foldLeft((0, Map[NodeIDType, Int]())){ case ((i, res), node) => (i+1, res += (node -> i)) }._2
+        val commID_to_ind = communities.foldLeft((0, Map[CommunityType, Int]())){ case ((i, res), community) => (i+1, res += (community -> i)) }._2
+        
+        // Computes the adjacency matrix by building the auxiliary arrays forming the CSC Matrix
+        println("Construction matrices")
+        val adj_matrix = CSCMatrix.zeros[Int](nb_nodes, nb_nodes)
+        nodes.foreach(n => adj_map(n).foreach{ case (v,w) => adj_matrix(nodeID_to_ind(n), nodeID_to_ind(v)) = w })
+
+        // Computes the community matrix by building the auxiliary arrays forming the CSC Matrix
+        val comm_matrix = CSCMatrix.zeros[Int](nb_nodes, nb_comm)
+        nodes.foreach(n => comm_matrix(nodeID_to_ind(n), commID_to_ind(comm_map(n))) = 1)
+
+        (adj_matrix, comm_matrix)
+    }
+
+    /* def get_matrices[CommunityType, NodeIDType](
         graph: Graph, 
         weight_att: Witness, 
         comm_att: Witness
@@ -119,5 +178,5 @@ object polarisation {
         val comm_matrix = time { new CSCMatrix(Array.fill(nb_nodes){1}, nb_nodes, nb_comm, (indptrc :+ nb_nodes).toArray, indicesc.toArray) }
 
         (adj_matrix, comm_matrix)
-    }
+    } */
 }
