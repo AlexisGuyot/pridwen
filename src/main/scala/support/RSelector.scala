@@ -1,10 +1,8 @@
 package pridwen.support
 
-import shapeless.{HList, HNil, ::, Witness}
+import shapeless.{HList, ::, Witness}
 import shapeless.labelled.{FieldType => Field}
-import shapeless.ops.record.{Selector}
-
-
+import shapeless.ops.record.Selector
 
 trait RSelector[H <: HList, F] { type K ; type V ; def apply(hlist: H): V }
 trait LowPriorityRSelector {
@@ -12,11 +10,9 @@ trait LowPriorityRSelector {
 
     protected def inhabit_Type[H <: HList, F, K0, V0](
         f: H => V0
-    ): Aux[H, F, K0, V0] 
-        = new RSelector[H, F] { 
-            type K = K0 
-            type V = V0 
-            def apply(hlist: H) = f(hlist) 
+    ): Aux[H, F, K0, V0] = new RSelector[H, F] { 
+        type K = K0 ; type V = V0 
+        def apply(hlist: H) = f(hlist) 
     }
 
     implicit def f_is_a_field_name[H <: HList, FName, FType](
@@ -26,9 +22,7 @@ trait LowPriorityRSelector {
         (hlist: H) => select_field(hlist)
     )
 }
-object RSelector extends LowPriorityRSelector {
-    def apply[H <: HList, F](implicit ok: RSelector[H, F]): Aux[H, F, ok.K, ok.V] = ok
-    
+object RSelector extends LowPriorityRSelector {    
     implicit def f_is_a_field[H <: HList, FName, FType](
         implicit
         select_field: Selector.Aux[H, FName, FType]

@@ -1,30 +1,23 @@
-package pridwen.models.aux
+package pridwen.schemaop
 
 import shapeless.{HList, HNil, ::, Witness, Lazy}
 import shapeless.labelled.{FieldType => Field, field}
 
-import pridwen.models.{Model}
-import pridwen.support.{RSelector}
-import pridwen.support.functions.{getFieldValue}
-
-
+import pridwen.support.RSelector
+import pridwen.support.functions.getFieldValue
 
 trait As[FName, Path <: HList]
-object As {
-    def apply[Path <: HList](field_name: Witness, path: Path) = new As[field_name.T, Path] {}
-}
+object As { def apply[Path <: HList](field_name: Witness, path: Path) = new As[field_name.T, Path] {} }
 
 trait SelectField[Schema <: HList, Path] { type FName ; type FType ; def apply(schema: Schema): Field[FName, FType] }
 object SelectField {
-    def apply[Schema <: HList, Path](implicit ok: SelectField[Schema, Path]): Aux[Schema, Path, ok.FName, ok.FType] = ok
     type Aux[Schema <: HList, Path, FName0, FType0] = SelectField[Schema, Path] { type FName = FName0 ; type FType = FType0 }
 
     protected def inhabit_Type[Schema <: HList, Path, FName0, FType0](
         f: Schema => Field[FName0, FType0]
-    ): Aux[Schema, Path, FName0, FType0] 
-        = new SelectField[Schema, Path] { 
-            type FName = FName0 ; type FType = FType0 
-            def apply(schema: Schema) = f(schema) 
+    ): Aux[Schema, Path, FName0, FType0] = new SelectField[Schema, Path] { 
+        type FName = FName0 ; type FType = FType0 
+        def apply(schema: Schema) = f(schema) 
     }
 
     implicit def schema_is_nested [

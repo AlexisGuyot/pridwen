@@ -4,8 +4,6 @@ import shapeless.{HList, Witness}
 import shapeless.labelled.{FieldType => Field, field}
 import shapeless.ops.record.{Selector => RSelector}
 
-
-
 object functions {
     def getFieldValue[FName,FType](f: Field[FName,FType]): FType = f
 

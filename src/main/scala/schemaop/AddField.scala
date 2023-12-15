@@ -1,4 +1,4 @@
-package pridwen.models.aux
+package pridwen.schemaop
 
 import shapeless.{HList, ::, HNil}
 import shapeless.labelled.{FieldType => Field, field}
@@ -6,19 +6,15 @@ import shapeless.ops.hlist.{Replacer, Prepend}
 
 import pridwen.support.{RSelector}
 
-
-
 trait AddField[Schema <: HList, Path <: HList, Field_Name, Field_Type] { type Out <: HList ; def apply(schema: Schema, value: Field_Type): Out }
 object AddField {
     type Aux[Schema <: HList, Path <: HList, Field_Name, Field_Type, New_Schema <: HList] = AddField[Schema, Path, Field_Name, Field_Type] { type Out = New_Schema }
-    def apply[Schema <: HList, Path <: HList, Field_Name, Field_Type](implicit ok: AddField[Schema, Path, Field_Name, Field_Type]): Aux[Schema, Path, Field_Name, Field_Type, ok.Out] = ok
 
     protected def inhabit_Type[Schema <: HList, Path <: HList, Field_Name, Field_Type, New_Schema <: HList](
         f: (Schema, Field_Type) => New_Schema
-    ): Aux[Schema, Path, Field_Name, Field_Type, New_Schema] 
-        = new AddField[Schema, Path, Field_Name, Field_Type] { 
-            type Out = New_Schema 
-            def apply(s: Schema, a: Field_Type) = f(s, a) 
+    ): Aux[Schema, Path, Field_Name, Field_Type, New_Schema] = new AddField[Schema, Path, Field_Name, Field_Type] { 
+        type Out = New_Schema 
+        def apply(s: Schema, a: Field_Type) = f(s, a) 
     }
 
     implicit def schema_is_nested [

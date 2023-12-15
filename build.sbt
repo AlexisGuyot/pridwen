@@ -32,5 +32,32 @@ libraryDependencies ++= Seq(
   "eu.timepit" %% "refined-shapeless"       % "0.11.0"  // optional
 )
 
+// Breeze
+libraryDependencies  ++= Seq(
+  "org.scalanlp" %% "breeze" % "1.1",
+  "org.scalanlp" %% "breeze-natives" % "1.1",
+  "org.scalanlp" %% "breeze-viz" % "1.1"
+)
+
+// Gephi
+resolvers ++= Seq(
+  "gephi-thirdparty" at "https://raw.github.com/gephi/gephi/mvn-thirdparty-repo/"
+)
+
+libraryDependencies += "org.gephi" % "gephi-toolkit" % "0.10.1" classifier "all"
+
+//scalaVersion := "2.13.3"
+// Spark
 libraryDependencies += "org.apache.spark" %% "spark-core" % "3.4.0"
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "3.4.0"
+
+// UPickles + OS-lib
+libraryDependencies += "com.lihaoyi" %% "os-lib" % "0.9.1"
+libraryDependencies += "com.lihaoyi" %% "upickle" % "3.1.3"
+
+// Scala XML
+libraryDependencies += "org.scala-lang.modules" %% "scala-xml" % "2.2.0"
+
+// Parallel collections
+libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4"
+
