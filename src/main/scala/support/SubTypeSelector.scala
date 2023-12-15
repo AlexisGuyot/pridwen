@@ -3,23 +3,35 @@ package pridwen.support
 import shapeless.{HList, HNil, ::, DepFn1}
 import scala.annotation.implicitNotFound
 
-// Finds the first element in HList L that is a sub-type of ST. Output type is the first detected element.
-@implicitNotFound("Implicit not found: SubTypeSelector[${L}]. ${L} does not contain any element with supertype ${ST}.")
-trait SubTypeSelector[L <: HList, ST] extends DepFn1[L] with Serializable { type Out <: ST }
+// Finds the first element in HList L that is a sub-type of SuperType. Output type is the first matching element.
+@implicitNotFound("Implicit not found: SubTypeSelector[${H}]. ${H} does not contain any element with supertype ${SuperType}.")
+trait SubTypeSelector[H <: HList, SuperType] extends DepFn1[H] with Serializable { type Out <: SuperType }
 trait LowerPrioritySubTypeSelector {
-  type Aux[L <: HList, ST, Out0 <: ST] = SubTypeSelector[L, ST] { type Out = Out0 }
-  protected def inhabit_Type[L <: HList, ST, Out0 <: ST](f: L => Out0): Aux[L, ST, Out0] = new SubTypeSelector[L, ST] { type Out = Out0 ; def apply(l: L) = f(l) }
+  type Aux[H <: HList, SuperType, SubType <: SuperType] = SubTypeSelector[H, SuperType] { type Out = SubType }
 
-  implicit def head_is_not_a_st [
-    ST, H, T <: HList, 
-    Out0 <: ST
+  protected def inhabit_Type[H <: HList, SuperType, SubType <: SuperType](
+    f: H => SubType
+  ): Aux[H, SuperType, SubType] 
+    = new SubTypeSelector[H, SuperType] { 
+        type Out = SubType 
+        def apply(hlist: H) = f(hlist) 
+  }
+
+  implicit def head_is_not_a_subtype [
+    SuperType, Head, Tail <: HList, 
+    SubType <: SuperType
   ](
     implicit
-    s: SubTypeSelector.Aux[T, ST, Out0]
-  ) = inhabit_Type[H::T, ST, Out0](l => s(l.tail))
+    search_in_tail: SubTypeSelector.Aux[Tail, SuperType, SubType]
+  ) = inhabit_Type[Head::Tail, SuperType, SubType](
+    (hlist: Head::Tail) => search_in_tail(hlist.tail)
+  )
 }
 object SubTypeSelector extends LowerPrioritySubTypeSelector {
-  def apply[L <: HList, ST](implicit ok: SubTypeSelector[L, ST]): Aux[L, ST, ok.Out] = ok
+  def apply[H <: HList, SuperType](implicit ok: SubTypeSelector[H, SuperType]): Aux[H, SuperType, ok.Out] = ok
 
-  implicit def head_is_a_st[ST, H <: ST, T <: HList] = inhabit_Type[H::T, ST, H](l => l.head)
+  implicit def head_is_a_subtype[SuperType, Head <: SuperType, Tail <: HList] 
+    = inhabit_Type[Head::Tail, SuperType, Head](
+      (hlist: Head::Tail) => hlist.head
+  )
 }

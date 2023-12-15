@@ -1,0 +1,65 @@
+java.lang.AssertionError: NoDenotation.owner
+occurred in the presentation compiler.
+
+action parameters:
+offset: 1885
+uri: file:///C:/Users/Alexis.DESKTOP-K9CA12K/Documents/Recherche/Code/pridwen/src/main/scala/models/models_aux/ReplaceAtt.scala
+text:
+package pridwen.models.aux
+
+import shapeless.{HList, HNil, ::, Lazy, Witness}
+import shapeless.ops.hlist.{Replacer, Last, Prepend}
+import shapeless.labelled.{FieldType => Field, field}
+
+import pridwen.support.{RSelector, ToHList, RSelector}
+
+trait ReplaceAtt[S <: HList, P <: HList, NAN, NAT] { type Out <: HList ; def apply(s: S, na: NAT): Out }
+trait LowerPriorityReplaceAtt {
+    type Aux[S <: HList, P <: HList, NAN, NAT, Out0 <: HList] = ReplaceAtt[S, P, NAN, NAT] { type Out = Out0 }
+    protected def inhabit_Type[S <: HList, P <: HList, NAN, NAT, Out0 <: HList](f: (S, NAT) => Out0): Aux[S, P, NAN, NAT, Out0] = new ReplaceAtt[S, P, NAN, NAT] { type Out = Out0 ; def apply(s: S, na: NAT) = f(s, na) }
+
+    implicit def recurse_path[S <: HList, H, T <: HList, NAN, NAT, K, V <: HList, Out0 <: HList, Out1 <: HList](
+        implicit
+        rs: RSelector.Aux[S, H, K, V],
+        sa: ReplaceAtt.Aux[V, T, NAN, NAT, Out0],
+        r: Replacer.Aux[S, Field[K, V], Field[K, Out0], (Field[K, V], Out1)]
+    ) = inhabit_Type[S, H::T, NAN, NAT, Out1](
+        (s: S, na: NAT) => r(s, field[K](sa(rs(s), na)))._2
+    )
+
+    implicit def stop_recursion_update[S <: HList, H, K, V, NAN, NAT, Out0 <: HList](
+        implicit
+        rs: RSelector.Aux[S, H, K, V],
+        r: Replacer.Aux[S, Field[K,V], Field[NAN, NAT], (Field[K,V], Out0)]
+    ) = inhabit_Type[S, H::HNil, NAN, NAT, Out0](
+        (s: S, na: NAT) => r(s, field[NAN](na))._2
+    )
+}
+trait LowPriorityReplaceAtt extends LowerPriorityReplaceAtt {
+}
+object ReplaceAtt extends LowPriorityReplaceAtt {
+    def apply[S <: HList, P <: HList, NAN, NAT](implicit ok: ReplaceAtt[S, P, NAN, NAT]): Aux[S, P, NAN, NAT, ok.Out] = ok
+
+    implicit def keep_name[S <: HList, P <: HList, K, NAT, T <: HList, Out0 <: HList]
+    (
+        implicit
+        l: Last.Aux[P, K],
+        r: RSelector.Aux[@@]
+        ra: Lazy[ReplaceAtt.Aux[S, P, K, NAT, Out0]]
+    ) = inhabit_Type[S, P, HNil, NAT, Out0](
+        (s: S, na: NAT) => ra.value(s, na)
+    )
+}
+
+
+error stacktrace:
+dotty.tools.dotc.core.SymDenotations$NoDenotation$.owner(SymDenotations.scala:2576)
+	scala.meta.internal.pc.SignatureHelpProvider$.isValid(SignatureHelpProvider.scala:83)
+	scala.meta.internal.pc.SignatureHelpProvider$.notCurrentApply(SignatureHelpProvider.scala:94)
+	scala.meta.internal.pc.SignatureHelpProvider$.$anonfun$1(SignatureHelpProvider.scala:48)
+	scala.collection.StrictOptimizedLinearSeqOps.loop$3(LinearSeq.scala:280)
+	scala.collection.StrictOptimizedLinearSeqOps.dropWhile(LinearSeq.scala:282)
+	scala.collection.StrictOptimizedLinearSeqOps.dropWhile$(LinearSeq.scala:278)
+	scala.collection.immutable.List.dropWhile(List.scala:79)
+	scala.meta.internal.pc.SignatureHelpProvider$.signatureHelp(SignatureHelpProvider.scala:48)
+	scala.meta.internal.pc.ScalaPresentationCompiler.signatureHelp$$anonfun$1(ScalaPresentationCompiler.scala:371)

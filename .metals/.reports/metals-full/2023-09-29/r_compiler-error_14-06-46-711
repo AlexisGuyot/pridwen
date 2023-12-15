@@ -1,0 +1,56 @@
+java.lang.AssertionError: NoDenotation.owner
+occurred in the presentation compiler.
+
+action parameters:
+offset: 1111
+uri: file:///C:/Users/Alexis.DESKTOP-K9CA12K/Documents/Recherche/Code/pridwen/src/main/scala/support/RSelector.scala
+text:
+package pridwen.support
+
+import shapeless.{HList, HNil, ::, Witness}
+import shapeless.labelled.{FieldType => Field}
+import shapeless.ops.record.{Selector}
+
+trait RSelector[L <: HList, P] { type K ; type V ; def apply(l: L): V }
+trait LowPriorityRSelector {
+    type Aux[L <: HList, P, K0, V0] = RSelector[L, P] { type K = K0 ; type V = V0 }
+    protected def inhabit_Type[L <: HList, P, K0, V0](f: L => V0): Aux[L, P, K0, V0] = new RSelector[L, P] { type K = K0 ; type V = V0 ; def apply(l: L) = f(l) }
+
+    implicit def p_is_field_name[L <: HList, K, V](
+        implicit
+        s: Selector.Aux[L, K, V]
+    ) = inhabit_Type[L, K, K, V](
+        (l: L) => s(l)
+    )
+}
+object RSelector extends LowPriorityRSelector {
+    def apply[L <: HList, P](implicit ok: RSelector[L, P]): Aux[L, P, ok.K, ok.V] = ok
+    
+    implicit def p_is_field[L <: HList, K, V](
+        implicit
+        s: Selector.Aux[L, K, V]
+    ) = inhabit_Type[L, Field[K,V], K, V](
+        (l: L) => s(l)
+    )
+
+    implicit def p_is_witness[L <: HList, W <: Witness, V](
+        implicit
+        w: Witness.Aux[@@]
+        s: Selector.Aux[L, W#T, V]
+    ) = inhabit_Type[L, W, W#T, V](
+        (l: L) => s(l)
+    )
+}
+
+
+error stacktrace:
+dotty.tools.dotc.core.SymDenotations$NoDenotation$.owner(SymDenotations.scala:2576)
+	scala.meta.internal.pc.SignatureHelpProvider$.isValid(SignatureHelpProvider.scala:83)
+	scala.meta.internal.pc.SignatureHelpProvider$.notCurrentApply(SignatureHelpProvider.scala:94)
+	scala.meta.internal.pc.SignatureHelpProvider$.$anonfun$1(SignatureHelpProvider.scala:48)
+	scala.collection.StrictOptimizedLinearSeqOps.loop$3(LinearSeq.scala:280)
+	scala.collection.StrictOptimizedLinearSeqOps.dropWhile(LinearSeq.scala:282)
+	scala.collection.StrictOptimizedLinearSeqOps.dropWhile$(LinearSeq.scala:278)
+	scala.collection.immutable.List.dropWhile(List.scala:79)
+	scala.meta.internal.pc.SignatureHelpProvider$.signatureHelp(SignatureHelpProvider.scala:48)
+	scala.meta.internal.pc.ScalaPresentationCompiler.signatureHelp$$anonfun$1(ScalaPresentationCompiler.scala:371)

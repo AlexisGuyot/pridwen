@@ -1,48 +1,56 @@
 package pridwen.support
 
 import shapeless.{HList, HNil, ::, DepFn1}
-import shapeless.labelled.{FieldType, field}
+import shapeless.labelled.{FieldType => Field, field}
 import shapeless.ops.hlist.{Prepend}
 
-// Transforms anything to a HList (handles nested HList). Output type is the resulting HList.
+
+
+// Transforms anything to a HList (handles nesting). Output type is the resulting HList.
 trait ToHList[T] extends DepFn1[T] with Serializable { type Out <: HList }
 trait LowPriorityToHList {
-  type Aux[T, Out0 <: HList] = ToHList[T] { type Out = Out0 }
-  protected def inhabit_Type[T, Out0 <: HList](f: T => Out0): Aux[T, Out0] = new ToHList[T] { type Out = Out0 ; def apply(t: T): Out = f(t) }
+  type Aux[T, H <: HList] = ToHList[T] { type Out = H }
 
-  implicit def default[T] = inhabit_Type[T, T::HNil](t => t :: HNil)
+  protected def inhabit_Type[T, H <: HList](
+    f: T => H
+  ): Aux[T, H] 
+    = new ToHList[T] { 
+      type Out = H 
+      def apply(t: T): Out = f(t) 
+  }
+
+  implicit def default[T] = inhabit_Type[T, T::HNil](
+    (t: T) => t :: HNil
+  )
 }
 object ToHList extends LowPriorityToHList {
   def apply[T](implicit ok: ToHList[T]): Aux[T, ok.Out] = ok
 
-  implicit def input_is_already_a_hlist [
-    H, T <: HList, 
-    Out0 <: HList, Out1 <: HList, 
-    Out2 <: HList
+  implicit def t_is_a_hlist [
+    Head, Tail <: HList, 
+    HHead <: HList, HTail <: HList, 
+    H <: HList
   ](
     implicit
-    t1: ToHList.Aux[H, Out0],
-    t2: ToHList.Aux[T, Out1],
-    p: Prepend.Aux[Out0, Out1, Out2]
-  ) = inhabit_Type[H::T, Out2](l => p(t1(l.head), t2(l.tail)))
+    to_hlist_head: ToHList.Aux[Head, HHead],
+    to_hlist_tail: ToHList.Aux[Tail, HTail],
+    concat: Prepend.Aux[HHead, HTail, H]
+  ) = inhabit_Type[Head::Tail, H](
+    (t: Head::Tail) => concat(to_hlist_head(t.head), to_hlist_tail(t.tail))
+  )
 
-  implicit def input_is_already_an_empty_hlist = inhabit_Type[HNil, HNil](x => HNil)
+  implicit def t_is_an_empty_hlist = inhabit_Type[HNil, HNil](
+    (t: HNil) => HNil
+  )
 
-  implicit def input_is_a_nested_field [ 
-    K, V, 
-    Out0 <: HList
+  implicit def t_is_a_nested_field [ 
+    FName, FType, 
+    HFType <: HList
   ](
     implicit
-    i: IsSubTypeOf[V, FieldType[_,_] :: HList :: HNil],
-    t: ToHList.Aux[V, Out0]
-  ) = inhabit_Type[FieldType[K,V], FieldType[K, Out0]::HNil](f => field[K](t(f)) :: HNil)
-
-  implicit def input_is_a_product [
-    A, B, 
-    Out0 <: HList, Out1 <: HList
-  ](
-    implicit
-    t1: ToHList.Aux[A, Out0],
-    t2: ToHList.Aux[B, Out1]
-  ) = inhabit_Type[Product2[A,B], Product2[Out0, Out1]:: HNil](p => (t1(p._1), t2(p._2)) :: HNil)
+    f_is_nested: IsSubTypeOf[FType, Field[_,_] :: HList :: HNil],
+    to_hlist_ftype: ToHList.Aux[FType, HFType]
+  ) = inhabit_Type[Field[FName,FType], Field[FName, HFType]::HNil](
+    (t: Field[FName,FType]) => field[FName](to_hlist_ftype(t)) :: HNil
+  )
 }
