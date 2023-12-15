@@ -92,19 +92,16 @@ object community {
         val community_sizes: Map[CommunityType, Int] = Map() 
         
         // Fills in a map associating each community with its size
-        println("Tailles communautés")
+        println("--- Calculating the size of communities (substep 1/2)")
         time { graph.nodes(same_schema).asList.foreach(node => { 
             val comm = select_community(node)
             community_sizes(comm) = community_sizes.getOrElse(comm, 0) + 1
         }) }        
 
         // Creates a new graph by filtering the nodes of the input graph that are not members of a significant community (community size < resolution limit of the graph)
-        println("Création nouveau graphe significatif")
+        println("--- Creation of a new graph excluding members of non-significant communities (substep 2/2)")
         val resolution_limit = java.lang.Math.sqrt(2*graph.data.size)
-        time { new_dataset(time { graph.data.par.filter(hlist => 
-            (community_sizes(select_source_community(hlist)) > resolution_limit) && 
-            (community_sizes(select_dest_community(hlist)) > resolution_limit)
-        ).toList }) }
+        time { new_dataset(graph.data.par.filter(hlist => (community_sizes(select_source_community(hlist)) > resolution_limit) && (community_sizes(select_dest_community(hlist)) > resolution_limit)).toList) }
     }
 
 
@@ -119,19 +116,15 @@ object community {
         addTo_source: AddField.Aux[graph.Schema, Graph.SourceName :: HNil, Witness.`'community`.T, Int, Out0],
         addTo_dest: AddField.Aux[Out0, Graph.DestName :: HNil, Witness.`'community`.T, Int, New_Schema]
     ): List[New_Schema] = {
-        println("Chargement XML")
+        println("--- Loading the file (substep 1/3)")
         val g_rt = time { scala.xml.XML.loadFile("/home/alexis/Documents/Tweets/GMerged/g_rt") }
-        //val g_rt = time { scala.xml.XML.loadFile("/home/alexis/Documents/Tweets/GMerged/g_rt4") }
+
+        println("--- Building a node-community map (substep 2/3)")
         val nodes: Map[Double, Int] = Map()
-        println("Parcours XML")
         time { (g_rt \ "graph" \ "node").foreach(node => nodes((node \ "data").find(d => (d \@ "key") == "v_name").map(_.text).get.toDouble) = (node \ "data").find(d => (d \@ "key") == "v_community").map(_.text).get.toInt) }
 
-        println("Création liste arêtes")
-        time { graph.data.par.map(hlist => {
-        //time { graph.data.par.filter(hlist => nodes.contains(select_sourceID(hlist)) && nodes.contains(select_destID(hlist))).map(hlist => {
-            val sourceID = select_sourceID(hlist) ; val destID = select_destID(hlist)
-            addTo_dest(addTo_source(hlist, nodes(sourceID)), nodes(destID))
-        }).toList }
+        println("-- Creating the list of edges for the new graph (substep 3/3)")
+        time { graph.data.par.map(hlist => addTo_dest(addTo_source(hlist, nodes(select_sourceID(hlist))), nodes(select_destID(hlist)))).toList }
     }
 
     // Source : https://biercoff.com/easily-measuring-code-execution-time-in-scala/

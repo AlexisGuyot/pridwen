@@ -18,11 +18,11 @@ object display {
             case _: pridwen.models.Graph => "Graph"
             case _ => "Model"
         }
-        println(s"============= ${name}\n")
+        println(s"\n============= ${name}\n")
         println(s"Model: ${m}\n")
         println(s"Schema: \n${schema()}")
         if(dataset.data.size < 10) println(s"Data: ${dataset.data}\n")
-        println("=======================================\n")
+        println("=======================================")
     }
 
     def show_dataset_nomodel[T](
@@ -33,10 +33,10 @@ object display {
         implicit
         print_dataset: PrintType[T]
     ): Unit = {
-        println(s"============= ${name}\n")
+        println(s"\n============= ${name}\n")
         println(s"Type: ${print_dataset.apply}\n")
         if(show_data) println(s"Value: ${dataset}\n")
-        println("=======================================\n")
+        println("=======================================")
     }
 }
 

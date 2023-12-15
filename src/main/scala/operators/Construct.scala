@@ -39,14 +39,14 @@ object construct {
                     implicit
                     eq: S =:= ((Field[SourceID_Name, NodeID_Type] :: SourceAtt) :: (Field[DestID_Name, NodeID_Type] :: DestAtt) :: (Field[W.`'weight`.T, Int] :: EdgeAtt) :: HNil)
                 ): Out = {
-                    println("Aggrégation arêtes")
+                    println("--- Edge aggregation (substep 1/2)")
                     val d: List[S] = time {
                         from.data.par
                             .groupBy(schema => (get_source_id(schema) :: source_att(schema), get_dest_id(schema) :: dest_att(schema), edge_att(schema)))
                             .mapValues(_.size)
                             .map { case (key, value) => eq.flip(key._1 :: key._2 :: (field[W.`'weight`.T](value) :: key._3) :: HNil) }
                             .toList }
-                    println("Chargement graphe")
+                    println("--- Modelling data in a graph (substep 1/2)")
                     time { new_dataset(d) }
                 }
                 
